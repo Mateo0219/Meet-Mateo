@@ -92,6 +92,24 @@
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
+  /* 歌词滚动条样式 */
+  .lyrics-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .lyrics-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .lyrics-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(139, 92, 246, 0.3);
+    border-radius: 3px;
+  }
+
+  .lyrics-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(139, 92, 246, 0.5);
+  }
 }
 
 /* 旋转动画 */

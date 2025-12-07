@@ -2,7 +2,7 @@
 
 import DateTime from "./DateTime";
 import TimeProgress from "./TimeProgress";
-import MusicPlayer from "./MusicPlayer";
+import ZhuangDafeiMusic from "./MusicPlayer";
 import ParticleAnimation from "./ParticleAnimation";
 
 export default function Hero() {
@@ -63,7 +63,7 @@ export default function Hero() {
           <div className="space-y-6 flex flex-col justify-center">
             <DateTime />
             <TimeProgress />
-            <MusicPlayer />
+            <ZhuangDafeiMusic />
           </div>
         </div>
       </div>
