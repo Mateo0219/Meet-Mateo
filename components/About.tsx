@@ -1,152 +1,135 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { User, Code, Heart } from "lucide-react";
-import { useSmoothInView } from "./useSmoothInView";
+import { User, Heart, GraduationCap, Briefcase, Award, MapPin, Calendar, LucideIcon } from "lucide-react";
 
-const aboutItems = [
+// 个人经历数据
+const experiences = [
   {
-    icon: Code,
-    title: "全栈开发",
-    description: "从前端到后端，从设计到实现，打造完整的数字解决方案",
+    icon: GraduationCap,
+    period: "2018 - 2022",
+    title: "XX大学",
+    organization: "XX专业",
+    description: "在校期间主修XX专业，积极参与各类活动，培养了良好的学习能力和团队协作精神。",
+    color: "text-aurora-blue",
+    bgColor: "bg-aurora-blue/10",
   },
   {
-    icon: Heart,
-    title: "用户体验",
-    description: "专注于创造直观、优雅且高效的交互体验",
+    icon: Briefcase,
+    period: "2022 - 至今",
+    title: "XX公司",
+    organization: "XX职位",
+    description: "在工作中不断学习和成长，积累了丰富的实践经验，也结识了很多优秀的同事和朋友。",
+    color: "text-aurora-purple",
+    bgColor: "bg-aurora-purple/10",
   },
   {
-    icon: User,
-    title: "持续学习",
-    description: "紧跟技术趋势，不断探索新的可能性和最佳实践",
+    icon: Award,
+    period: "2023",
+    title: "XX荣誉",
+    organization: "XX组织",
+    description: "获得了XX荣誉，这是对我努力和成长的认可，也激励我继续前行。",
+    color: "text-aurora-pink",
+    bgColor: "bg-aurora-pink/10",
   },
 ];
 
 export default function About() {
-  const { ref: titleRef, shouldAnimate: titleShouldAnimate } = useSmoothInView("-100px", 300);
-  const { ref: infoRef, shouldAnimate: infoShouldAnimate } = useSmoothInView("-100px", 300);
-
   return (
     <section id="about" className="py-20 md:py-32 relative">
       <div className="max-w-7xl mx-auto px-4 md:px-8">
-        <motion.div
-          ref={titleRef}
-          initial={{ opacity: 0, y: 30 }}
-          animate={titleShouldAnimate ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-          transition={{ duration: 0.8 }}
-          className="text-center mb-16"
-        >
+        <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-gradient mb-4">
             关于我
           </h2>
           <p className="text-white/60 text-lg max-w-2xl mx-auto">
-            热爱编程，专注于创造有价值的数字产品
+            一个热爱生活、享受当下的人
           </p>
-        </motion.div>
-
-        <div className="grid md:grid-cols-3 gap-6">
-          {aboutItems.map((item, index) => {
-            const Icon = item.icon;
-            const { ref: cardRef, shouldAnimate: cardShouldAnimate } = useSmoothInView("-50px", 300);
-            
-            return (
-              <motion.div
-                key={item.title}
-                ref={cardRef}
-                initial={{ opacity: 0, y: 50, rotateX: -15 }}
-                animate={cardShouldAnimate ? { opacity: 1, y: 0, rotateX: 0 } : { opacity: 0, y: 50, rotateX: -15 }}
-                transition={{
-                  delay: index * 0.15,
-                  duration: 0.6,
-                  type: "spring",
-                  stiffness: 100,
-                }}
-                whileHover={{
-                  y: -8,
-                  rotateX: 5,
-                  transition: { duration: 0.3 },
-                }}
-                className="glass-card glass-card-hover p-8 relative overflow-hidden group"
-              >
-                <motion.div
-                  className="absolute top-0 right-0 w-32 h-32 bg-aurora-purple/10 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                  animate={{
-                    scale: [1, 1.2, 1],
-                    rotate: [0, 90, 0],
-                  }}
-                  transition={{
-                    duration: 8,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                />
-                <motion.div
-                  className="mb-4 relative z-10"
-                  whileHover={{ scale: 1.1, rotate: [0, -10, 10, 0] }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <Icon className="w-12 h-12 text-aurora-purple" />
-                </motion.div>
-                <h3 className="text-xl font-semibold text-white mb-3 relative z-10">
-                  {item.title}
-                </h3>
-                <p className="text-white/60 leading-relaxed relative z-10">
-                  {item.description}
-                </p>
-              </motion.div>
-            );
-          })}
         </div>
 
-        {/* Additional Info */}
-        <motion.div
-          ref={infoRef}
-          initial={{ opacity: 0, y: 30 }}
-          animate={infoShouldAnimate ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-          transition={{ delay: 0.6, duration: 0.8 }}
-          className="mt-16 glass-card p-8 md:p-12"
-        >
-          <div className="grid md:grid-cols-2 gap-8">
+        {/* Personal Introduction */}
+        <div className="glass-card p-8 md:p-12 mb-12">
+          <div className="grid md:grid-cols-2 gap-8 mb-12">
             <div>
               <h3 className="text-2xl font-semibold text-white mb-4">
-                我的故事
+                自我介绍
               </h3>
               <p className="text-white/60 leading-relaxed mb-4">
-                从对技术的热爱开始，我一直在探索如何用代码创造价值。
-                我相信好的设计不仅仅是美观，更是要解决实际问题。
+                你好！很高兴认识你。我是一个热爱生活、享受当下的人。
+                我相信生活中的每一个瞬间都值得被记录和珍惜。
+              </p>
+              <p className="text-white/60 leading-relaxed mb-4">
+                我喜欢运动，特别是足球和乒乓球。这些运动不仅让我保持健康，
+                也让我学会了团队合作和坚持不懈的精神。
               </p>
               <p className="text-white/60 leading-relaxed">
-                在每一个项目中，我都致力于创造既美观又实用的解决方案，
-                让技术真正服务于用户。
+                除了运动，我也喜欢记录生活中的美好瞬间，无论是和朋友一起的时光，
+                还是独自思考的时刻，都构成了我生活的一部分。
               </p>
             </div>
             <div>
               <h3 className="text-2xl font-semibold text-white mb-4">
-                我的价值观
+                我的特点
               </h3>
               <ul className="space-y-3 text-white/60">
                 <li className="flex items-start gap-3">
                   <span className="text-aurora-purple mt-1">▸</span>
-                  <span>代码质量优先，追求优雅的实现</span>
+                  <span>热爱运动，享受团队合作的乐趣</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-aurora-purple mt-1">▸</span>
-                  <span>用户为中心，体验至上</span>
+                  <span>积极乐观，对生活充满热情</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-aurora-purple mt-1">▸</span>
-                  <span>持续学习，拥抱变化</span>
+                  <span>喜欢记录和分享生活中的美好</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-aurora-purple mt-1">▸</span>
-                  <span>团队协作，共同成长</span>
+                  <span>珍惜友谊，重视人与人之间的连接</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-aurora-purple mt-1">▸</span>
+                  <span>保持学习，不断成长</span>
                 </li>
               </ul>
             </div>
           </div>
-        </motion.div>
+
+          {/* Experience Timeline */}
+          <div className="mt-12">
+            <h3 className="text-2xl font-semibold text-white mb-8">个人经历</h3>
+            <div className="space-y-6">
+              {experiences.map((exp, index) => {
+                const Icon = exp.icon;
+
+                return (
+                  <div key={index} className="flex gap-6 relative">
+                    {/* Timeline Line */}
+                    {index < experiences.length - 1 && (
+                      <div className="absolute left-6 top-16 bottom-0 w-0.5 bg-white/10" />
+                    )}
+
+                    {/* Icon */}
+                    <div className={`flex-shrink-0 w-12 h-12 rounded-full ${exp.bgColor} flex items-center justify-center relative z-10`}>
+                      <Icon className={`w-6 h-6 ${exp.color}`} />
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 pb-8">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
+                        <h4 className="text-xl font-semibold text-white">{exp.title}</h4>
+                        <span className="text-sm text-white/40">{exp.period}</span>
+                      </div>
+                      <p className="text-aurora-purple mb-2">{exp.organization}</p>
+                      <p className="text-white/60 leading-relaxed">{exp.description}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
 }
-

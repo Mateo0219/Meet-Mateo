@@ -12,9 +12,6 @@ export default function ScrollToTop() {
       window.history.scrollRestoration = "manual";
     }
 
-    // 页面加载时立即滚动到顶部
-    window.scrollTo(0, 0);
-
     // 确保在各种情况下都滚动到顶部
     const scrollToTop = () => {
       window.scrollTo({
@@ -29,17 +26,18 @@ export default function ScrollToTop() {
 
     // DOM 加载完成后再次确保在顶部
     if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", scrollToTop);
+      document.addEventListener("DOMContentLoaded", scrollToTop, { once: true });
     } else {
       scrollToTop();
     }
 
     // 页面完全加载后再次确保
-    window.addEventListener("load", scrollToTop);
+    window.addEventListener("load", scrollToTop, { once: true });
 
+    // 注意：DOMContentLoaded 和 load 事件使用 { once: true } 选项，不需要手动移除
+    // 但为了代码清晰，我们仍然在清理函数中移除（虽然实际上不会执行）
     return () => {
-      document.removeEventListener("DOMContentLoaded", scrollToTop);
-      window.removeEventListener("load", scrollToTop);
+      // 这些事件监听器使用 { once: true }，会自动移除，但保留清理函数以确保代码清晰
     };
   }, []);
 
