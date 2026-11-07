@@ -1,506 +1,673 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Play, Pause, SkipForward, SkipBack, Music2, Loader2 } from "lucide-react";
+import Image from "next/image";
+import type { CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowUpRight,
+  Loader2,
+  ListMusic,
+  Pause,
+  Play,
+  SkipBack,
+  SkipForward,
+} from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { findActiveLyricIndex, LyricLine, parseLyrics } from "@/lib/lyrics";
+import { requestMediaPlayback } from "@/lib/media-playback";
+import { MUSIC_PLAYLIST_URL } from "@/lib/music-config";
+import { loadPlaylist, type LibraryTrack } from "@/lib/use-playlist";
+import PlaylistPicker from "./PlaylistPicker";
 
-interface ApiTrack {
-  title: string;
-  author: string;
-  pic: string;
-  url: string; // 这是获取播放链接的 API
-  lrc: string; // 歌词链接
+interface MusicTrack extends LibraryTrack {
+  lyrics?: LyricLine[];
 }
 
-interface MusicTrack {
-  name: string;
-  artist: string;
-  playUrl?: string; // 实际播放链接（延迟加载）
-  cover: string;
-  urlApi: string; // 获取播放链接的 API
-  lrcUrl: string;
-  lyrics?: LyricLine[]; // 歌词（延迟加载）
+export interface TrackRequest {
+  id: string;
+  nonce: number;
+  autoplay: boolean;
 }
 
-interface LyricLine {
-  time: number; // 秒
-  text: string;
+export interface MusicControls {
+  toggle: () => void;
+  getProgress: () => { currentTime: number; duration: number };
 }
 
-/**
- * 庄达菲专属歌单 - 从 API 获取
- */
-export default function ZhuangDafeiMusic() {
+interface MusicPlayerProps {
+  onControlsReady?: (controls: MusicControls | null) => void;
+  onRequestHandled?: (nonce: number) => void;
+  /** Track to show first instead of a random one. */
+  initialTrackId?: string;
+  /** Ask the player to jump to a track from elsewhere on the page. */
+  request?: TrackRequest | null;
+  /** Reports the current track and whether it is playing, e.g. for a menu bar. */
+  onPlaybackChange?: (state: { track: Pick<LibraryTrack, "id" | "name" | "artist" | "cover">; playing: boolean } | null) => void;
+}
+
+const LYRIC_DISPLAY_LEAD_SECONDS = 0.12;
+const playerSpring = {
+  type: "spring" as const,
+  stiffness: 360,
+  damping: 34,
+  mass: 0.84,
+};
+
+const coverVariants = {
+  enter: (direction: number) => ({
+    opacity: 0,
+    x: direction * 34,
+    scale: 0.975,
+  }),
+  center: { opacity: 1, x: 0, scale: 1 },
+  exit: (direction: number) => ({
+    opacity: 0,
+    x: direction * -34,
+    scale: 0.98,
+  }),
+};
+
+function projectVelocity(velocity: number, decelerationRate = 0.99): number {
+  return (velocity / 1_000) * (decelerationRate / (1 - decelerationRate));
+}
+
+function formatTime(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    return "0:00";
+  }
+
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
+}
+
+function isAutoplayBlocked(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "name" in error && error.name === "NotAllowedError";
+}
+
+export default function MusicPlayer({ initialTrackId, request, onPlaybackChange, onControlsReady, onRequestHandled }: MusicPlayerProps) {
   const [playlist, setPlaylist] = useState<MusicTrack[]>([]);
+  const [playlistName, setPlaylistName] = useState("我喜欢的音乐");
+  const [playlistTotal, setPlaylistTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingTrack, setIsLoadingTrack] = useState(false); // 加载当前歌曲的播放链接和歌词
+  const [loadingTrackIndex, setLoadingTrackIndex] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const [trackDirection, setTrackDirection] = useState(1);
+  const [currentLyricIndex, setCurrentLyricIndex] = useState(-1);
   const [currentTime, setCurrentTime] = useState(0);
-  const [currentLyricIndex, setCurrentLyricIndex] = useState(-1); // 当前播放的歌词索引
+  const [duration, setDuration] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [isPlaylistOpen, setPlaylistOpen] = useState(false);
+  const playlistButtonRef = useRef<HTMLButtonElement>(null);
+  const selectedPlaybackRef = useRef<string | null>(null);
+  const initialTrackRef = useRef(initialTrackId);
+  const handledRequestRef = useRef<number | null>(null);
+
   const audioRef = useRef<HTMLAudioElement>(null);
-  const lyricsRef = useRef<HTMLDivElement>(null);
-
-  // 解析 LRC 歌词格式
-  const parseLyrics = (lrcText: string): LyricLine[] => {
-    const lines = lrcText.split('\n');
-    const lyrics: LyricLine[] = [];
-
-    lines.forEach((line) => {
-      // 匹配 [mm:ss.xx] 格式的时间戳
-      const timeRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/g;
-      const matches = [...line.matchAll(timeRegex)];
-      const text = line.replace(timeRegex, '').trim();
-
-      if (matches.length > 0 && text) {
-        matches.forEach((match) => {
-          const minutes = parseInt(match[1]);
-          const seconds = parseInt(match[2]);
-          const milliseconds = parseInt(match[3].padEnd(3, '0'));
-          const time = minutes * 60 + seconds + milliseconds / 1000;
-          lyrics.push({ time, text });
-        });
-      }
-    });
-
-    return lyrics.sort((a, b) => a.time - b.time);
-  };
-
-  // 获取歌单列表（只获取基本信息，不获取播放链接和歌词）
-  const fetchPlaylist = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const response = await fetch('/api/music/playlist?id=13049743731');
-      if (!response.ok) throw new Error('获取歌单失败');
-
-      const apiTracks: ApiTrack[] = await response.json();
-      
-      // 只保存基本信息，不获取播放链接和歌词
-      const tracks: MusicTrack[] = apiTracks.map((track) => ({
-        name: track.title,
-        artist: track.author,
-        cover: track.pic,
-        urlApi: track.url, // 保存获取播放链接的 API
-        lrcUrl: track.lrc,
-      }));
-
-      setPlaylist(tracks);
-    } catch (err: any) {
-      console.error('获取歌单错误:', err);
-      setError('获取歌单失败，请稍后重试');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 获取当前歌曲的播放链接和歌词
-  const fetchCurrentTrackData = async (trackIndex: number) => {
-    const track = playlist[trackIndex];
-    if (!track || track.playUrl) {
-      // 如果已经有播放链接，不需要重新获取
-      return;
-    }
-
-    try {
-      setIsLoadingTrack(true);
-      setError(null);
-
-      // 直接使用 urlApi 作为播放链接（它会 302 重定向到真正的播放地址）
-      // 浏览器会自动处理重定向
-      let playUrl = track.urlApi;
-      
-      // 获取歌词（通过本地 API 代理，避免 CORS 问题）
-      let lyrics: LyricLine[] = [];
-      try {
-        const lrcResponse = await fetch(`/api/music/lyrics?url=${encodeURIComponent(track.lrcUrl)}`);
-        if (lrcResponse.ok) {
-          const lrcData = await lrcResponse.json();
-          if (lrcData.lyrics) {
-            lyrics = parseLyrics(lrcData.lyrics);
-          }
-        }
-      } catch (err) {
-        console.warn('获取歌词失败:', err);
-      }
-
-      // 更新当前歌曲的播放链接和歌词
-      setPlaylist((prev) => {
-        const newPlaylist = [...prev];
-        newPlaylist[trackIndex] = {
-          ...newPlaylist[trackIndex],
-          playUrl,
-          lyrics,
-        };
-        return newPlaylist;
-      });
-    } catch (err: any) {
-      console.error('获取歌曲数据失败:', err);
-      setError('获取播放链接失败，请稍后重试');
-    } finally {
-      setIsLoadingTrack(false);
-    }
-  };
-
-  // 初始化加载歌单
-  useEffect(() => {
-    fetchPlaylist();
-  }, []);
+  const isPlayingRef = useRef(false);
+  const playRequestRef = useRef(0);
+  const playbackFrameRef = useRef<number | null>(null);
+  const lastTimelineUpdateRef = useRef(0);
+  const prefersReducedMotion = useReducedMotion();
 
   const currentTrackData = playlist[currentTrack];
+  const currentTrackId = currentTrackData?.id;
+  const currentPlayUrl = currentTrackData?.urlApi;
+  const isLoadingTrack = loadingTrackIndex === currentTrack;
 
-  // 更新当前歌词
+  // Primitive deps: lyric loads replace the track object but not the track.
+  const trackName = currentTrackData?.name;
+  const trackArtist = currentTrackData?.artist;
+  const trackCover = currentTrackData?.cover;
   useEffect(() => {
-    if (!audioRef.current || !currentTrackData?.lyrics) {
-      setCurrentLyricIndex(-1);
-      return;
-    }
+    if (!onPlaybackChange) return;
+    onPlaybackChange(
+      currentTrackId && trackName && trackArtist && trackCover
+        ? { track: { id: currentTrackId, name: trackName, artist: trackArtist, cover: trackCover }, playing: isPlaying }
+        : null,
+    );
+  }, [onPlaybackChange, currentTrackId, trackName, trackArtist, trackCover, isPlaying]);
 
-    const updateLyric = () => {
-      const time = audioRef.current?.currentTime || 0;
-      setCurrentTime(time);
+  const updatePlayingState = useCallback((playing: boolean) => {
+    isPlayingRef.current = playing;
+    setIsPlaying(playing);
+  }, []);
 
-      const lyrics = currentTrackData.lyrics || [];
-      if (lyrics.length === 0) {
-        setCurrentLyricIndex(-1);
-        return;
-      }
+  useEffect(() => {
+    let active = true;
+    setIsLoading(true);
+    setError(null);
 
-      // 找到当前时间对应的歌词索引
-      let foundIndex = -1;
-      for (let i = lyrics.length - 1; i >= 0; i--) {
-        if (time >= lyrics[i].time) {
-          foundIndex = i;
-          break;
-        }
-      }
+    loadPlaylist()
+      .then((library) => {
+        if (!active) return;
+        const preferred = library.tracks.findIndex((track) => track.id === initialTrackRef.current);
+        // Keep the list order for browsing; only the starting point varies.
+        setCurrentTrack(preferred >= 0 ? preferred : Math.floor(Math.random() * library.tracks.length));
+        setPlaylist(library.tracks.map((track) => ({ ...track })));
+        setPlaylistName(library.name);
+        setPlaylistTotal(library.total);
+      })
+      .catch((fetchError: unknown) => {
+        if (!active) return;
+        console.error("获取歌单错误:", fetchError);
+        setError("获取歌单失败，请稍后重试");
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
 
-      if (foundIndex !== currentLyricIndex) {
-        setCurrentLyricIndex(foundIndex);
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Lyrics do not block a user-initiated audio request. Abort stale track loads.
+  useEffect(() => {
+    if (!currentTrackId) return;
+    const controller = new AbortController();
+    setLoadingTrackIndex(currentTrack);
+    const loadLyrics = async () => {
+      try {
+        const response = await fetch(`/api/music/lyrics?id=${currentTrackId}`, {
+          signal: controller.signal,
+        });
+        if (!response.ok) return;
+        const data: unknown = await response.json();
+        if (!data || typeof data !== "object" || !("lyrics" in data) || typeof data.lyrics !== "string") return;
+        const lyrics = parseLyrics(data.lyrics);
+        if (controller.signal.aborted) return;
+        setPlaylist(previous => previous.map(track => track.id === currentTrackId ? { ...track, lyrics } : track));
+      } catch (error) {
+        if (!controller.signal.aborted) console.warn("获取歌词失败:", error);
+      } finally {
+        if (!controller.signal.aborted) setLoadingTrackIndex(null);
       }
     };
+    void loadLyrics();
+    return () => controller.abort();
+  }, [currentTrack, currentTrackId]);
 
-    const interval = setInterval(updateLyric, 100);
-    return () => clearInterval(interval);
-  }, [currentTrackData?.lyrics, currentTrack, currentLyricIndex]);
-
-  // 初始化音频音量（固定为 50%）
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = 0.5;
+    const audio = audioRef.current;
+    if (audio) {
+      audio.volume = 0.5;
     }
   }, []);
 
-  // 当切换歌曲时，获取该歌曲的播放链接和歌词
   useEffect(() => {
-    if (playlist.length > 0 && playlist[currentTrack]) {
-      setError(null);
-      setCurrentLyricIndex(-1);
-      fetchCurrentTrackData(currentTrack);
-    }
-  }, [currentTrack, playlist.length]);
-
-  // 当歌曲数据加载完成后，设置音频源
-  useEffect(() => {
-    const track = playlist[currentTrack];
-    if (track?.playUrl && audioRef.current) {
-      audioRef.current.src = track.playUrl;
-      audioRef.current.load();
-      // 如果正在播放，自动播放新歌曲
-      if (isPlaying) {
-        audioRef.current.play().catch((err) => {
-          console.error('自动播放失败:', err);
-          setIsPlaying(false);
-        });
-      }
-    }
-  }, [playlist[currentTrack]?.playUrl, currentTrack]);
-
-  const togglePlay = async () => {
-    const track = playlist[currentTrack];
-    if (!track) {
-      setError("请先选择歌曲");
+    const audio = audioRef.current;
+    if (!audio) {
       return;
     }
 
-    // 如果还没有播放链接，先获取
-    if (!track.playUrl) {
-      if (isLoadingTrack) {
-        setError("正在加载播放链接，请稍候...");
+    setCurrentLyricIndex(-1);
+    setCurrentTime(0);
+    setDuration(0);
+
+    // A list selection starts playback in the click handler to retain the
+    // browser's user gesture. Don't interrupt that request in this effect.
+    if (selectedPlaybackRef.current === currentTrackId) {
+      selectedPlaybackRef.current = null;
+      return;
+    }
+    const requestId = ++playRequestRef.current;
+
+    if (!currentPlayUrl || !isPlayingRef.current) {
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+      return;
+    }
+
+    if (audio.getAttribute("src") !== currentPlayUrl) {
+      audio.src = currentPlayUrl;
+      audio.load();
+    }
+
+    if (isPlayingRef.current) {
+      void requestMediaPlayback(audio).then((result) => {
+        if (requestId !== playRequestRef.current) {
+          return;
+        }
+
+        if (result.status === "failed") {
+          console.error("自动播放失败:", result.error);
+          updatePlayingState(false);
+          setError("这首歌暂时无法在网页播放，可切换下一首或前往网易云收听。");
+        }
+      });
+    }
+  }, [currentPlayUrl, currentTrack, currentTrackId, updatePlayingState]);
+
+  const playTrack = useCallback(async (track: MusicTrack) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.getAttribute("src") !== track.urlApi) {
+      audio.src = track.urlApi;
+      audio.load();
+    }
+    const requestId = ++playRequestRef.current;
+    const result = await requestMediaPlayback(audio);
+    if (requestId !== playRequestRef.current) return;
+    if (result.status === "playing") {
+      updatePlayingState(true);
+      setError(null);
+    } else {
+      updatePlayingState(false);
+      // A blocked autoplay is not a broken track; leave it paused quietly.
+      if (result.status === "failed" && !isAutoplayBlocked(result.error)) {
+        setError("这首歌暂时无法在网页播放，可切换下一首或前往网易云收听。");
+      }
+    }
+  }, [updatePlayingState]);
+
+  useEffect(() => {
+    if (!request || handledRequestRef.current === request.nonce || playlist.length === 0) return;
+    const index = playlist.findIndex((track) => track.id === request.id);
+    if (index < 0) return;
+    handledRequestRef.current = request.nonce;
+    onRequestHandled?.(request.nonce);
+    const track = playlist[index];
+    setError(null);
+    if (index !== currentTrack) {
+      selectedPlaybackRef.current = request.autoplay ? track.id : null;
+      setTrackDirection(index > currentTrack ? 1 : -1);
+      setCurrentTrack(index);
+      if (request.autoplay) updatePlayingState(false);
+    }
+    if (request.autoplay) void playTrack(track);
+  }, [request, playlist, currentTrack, playTrack, updatePlayingState, onRequestHandled]);
+
+  const togglePlay = useCallback(async () => {
+    const track = playlist[currentTrack];
+    const audio = audioRef.current;
+
+    if (!track || !audio) {
+      setError("当前没有可播放的歌曲");
+      return;
+    }
+
+    if (isPlaying) {
+      playRequestRef.current += 1;
+      updatePlayingState(false);
+      audio.pause();
+      return;
+    }
+
+    await playTrack(track);
+  }, [playlist, currentTrack, isPlaying, updatePlayingState, playTrack]);
+
+  useEffect(() => {
+    onControlsReady?.({
+      toggle: () => { void togglePlay(); },
+      getProgress: () => ({ currentTime: audioRef.current?.currentTime ?? 0, duration: audioRef.current?.duration || 0 }),
+    });
+    return () => onControlsReady?.(null);
+  }, [onControlsReady, togglePlay]);
+
+  const closePlaylist = useCallback(() => {
+    setPlaylistOpen(false);
+    playlistButtonRef.current?.focus({ preventScroll: true });
+  }, []);
+
+  const selectTrack = useCallback((index: number) => {
+    const track = playlist[index];
+    if (!track) return;
+    setError(null);
+    if (index !== currentTrack) {
+      selectedPlaybackRef.current = track.id;
+      setTrackDirection(index > currentTrack ? 1 : -1);
+      setCurrentTrack(index);
+      updatePlayingState(false);
+    }
+    closePlaylist();
+    void playTrack(track);
+  }, [playlist, currentTrack, closePlaylist, playTrack, updatePlayingState]);
+
+  const changeTrack = useCallback(
+    (direction: number) => {
+      if (playlist.length === 0) {
         return;
       }
-      await fetchCurrentTrackData(currentTrack);
-      // 等待一下让状态更新
-      await new Promise(resolve => setTimeout(resolve, 100));
+
+      playRequestRef.current += 1;
+      setError(null);
+      setTrackDirection(direction > 0 ? 1 : -1);
+      setCurrentTrack(
+        (current) => (current + direction + playlist.length) % playlist.length
+      );
+    },
+    [playlist.length]
+  );
+
+  const nextTrack = useCallback(() => changeTrack(1), [changeTrack]);
+  const previousTrack = useCallback(() => changeTrack(-1), [changeTrack]);
+
+  const syncPlaybackPosition = useCallback((forceTimelineUpdate = false) => {
+    const time = audioRef.current?.currentTime ?? 0;
+    const lyrics = currentTrackData?.lyrics ?? [];
+
+    if (
+      forceTimelineUpdate ||
+      Math.abs(time - lastTimelineUpdateRef.current) >= 0.08
+    ) {
+      lastTimelineUpdateRef.current = time;
+      setCurrentTime(time);
     }
 
-    const updatedTrack = playlist[currentTrack];
-    if (!updatedTrack?.playUrl) {
-      setError("该歌曲暂无播放链接");
+    const activeIndex = findActiveLyricIndex(
+      lyrics,
+      time,
+      LYRIC_DISPLAY_LEAD_SECONDS
+    );
+    setCurrentLyricIndex((current) =>
+      current === activeIndex ? current : activeIndex
+    );
+  }, [currentTrackData?.lyrics]);
+
+  const handleTimeUpdate = () => syncPlaybackPosition(true);
+
+  useEffect(() => {
+    if (!isPlaying) {
+      if (playbackFrameRef.current !== null) {
+        cancelAnimationFrame(playbackFrameRef.current);
+        playbackFrameRef.current = null;
+      }
       return;
     }
 
-    if (audioRef.current) {
-      try {
-        if (isPlaying) {
-          audioRef.current.pause();
-          setIsPlaying(false);
-        } else {
-          if (!audioRef.current.src || audioRef.current.src !== updatedTrack.playUrl) {
-            audioRef.current.src = updatedTrack.playUrl;
-            audioRef.current.load();
-          }
-          await audioRef.current.play();
-          setIsPlaying(true);
-          setError(null);
-        }
-      } catch (err: any) {
-        console.error("播放失败:", err);
-        setError("无法播放此音乐，请检查网络连接");
-        setIsPlaying(false);
+    const tick = () => {
+      syncPlaybackPosition();
+      playbackFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    playbackFrameRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (playbackFrameRef.current !== null) {
+        cancelAnimationFrame(playbackFrameRef.current);
+        playbackFrameRef.current = null;
       }
-    }
-  };
+    };
+  }, [isPlaying, syncPlaybackPosition]);
 
-  const nextTrack = () => {
-    if (playlist.length === 0) return;
-    const next = (currentTrack + 1) % playlist.length;
-    setCurrentTrack(next);
-    if (audioRef.current && playlist[next]?.playUrl && isPlaying) {
-      audioRef.current.src = playlist[next].playUrl;
-      audioRef.current.load();
-      audioRef.current.play().catch((err) => {
-        console.error("自动播放下一首失败:", err);
-        setIsPlaying(false);
-      });
-    }
-  };
-
-  const prevTrack = () => {
-    if (playlist.length === 0) return;
-    const prev = (currentTrack - 1 + playlist.length) % playlist.length;
-    setCurrentTrack(prev);
-    if (audioRef.current && playlist[prev]?.playUrl && isPlaying) {
-      audioRef.current.src = playlist[prev].playUrl;
-      audioRef.current.load();
-      audioRef.current.play().catch((err) => {
-        console.error("自动播放上一首失败:", err);
-        setIsPlaying(false);
-      });
-    }
-  };
-
-
-  const hasMusic = playlist.length > 0;
-
-  // 计算要显示的歌词范围（当前歌词前后各2-3行，总共6行）
-  const getVisibleLyrics = () => {
-    if (!currentTrackData?.lyrics || currentLyricIndex < 0) {
+  const visibleLyrics = useMemo(() => {
+    const lyrics = currentTrackData?.lyrics ?? [];
+    if (lyrics.length === 0) {
       return [];
     }
-    
-    const lyrics = currentTrackData.lyrics;
-    const startIndex = Math.max(0, currentLyricIndex - 2);
-    const endIndex = Math.min(lyrics.length - 1, currentLyricIndex + 3);
-    
-    return lyrics.slice(startIndex, endIndex + 1).map((lyric, idx) => ({
-      ...lyric,
-      originalIndex: startIndex + idx,
-    }));
+
+    const activeIndex = Math.max(currentLyricIndex, 0);
+    const startIndex = Math.max(0, activeIndex - 2);
+    const endIndex = Math.min(lyrics.length, activeIndex + 4);
+
+    return lyrics
+      .slice(startIndex, endIndex)
+      .map((lyric, index) => ({
+        ...lyric,
+        originalIndex: startIndex + index,
+      }))
+      .filter((lyric) => lyric.text.length > 0)
+      .slice(0, 4);
+  }, [currentLyricIndex, currentTrackData?.lyrics]);
+
+  const handleSeek = (value: number) => {
+    const audio = audioRef.current;
+    if (!audio || !Number.isFinite(value)) {
+      return;
+    }
+
+    audio.currentTime = value;
+    setCurrentTime(value);
+    syncPlaybackPosition(true);
   };
 
-  const visibleLyrics = getVisibleLyrics();
+  const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const hasMusic = playlist.length > 0;
 
   return (
-    <div 
-      className="glass-card-hover p-4 group relative overflow-hidden w-full rounded-2xl border border-white/5"
-      style={{
-        background: 'rgba(10, 10, 10, 0.4)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 8px 32px 0 rgba(0, 0, 0, 0.3)',
-        height: 'fit-content',
-        maxHeight: '400px',
-      }}
+    <section
+      className={`music-player${isPlaying ? " is-playing" : ""}${isPlaylistOpen ? " is-selecting" : ""}`}
+      aria-label="音乐播放器"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-aurora-purple/10 to-aurora-blue/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-      
-      <div className="relative z-10">
-        {/* 标题栏 */}
-        <div className="flex items-center gap-2 mb-4">
-          <Music2 className="w-4 h-4 text-aurora-purple" />
-          <h3 className="text-base font-semibold text-white">庄达菲的歌单</h3>
-          {playlist.length > 0 && (
-            <span className="text-xs text-white/40 ml-auto">
-              {currentTrack + 1} / {playlist.length}
-            </span>
-          )}
-        </div>
-        
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-5 h-5 text-aurora-purple animate-spin" />
-            <span className="ml-2 text-white/60 text-xs">加载歌单中...</span>
-          </div>
-        ) : (
-          <div className="flex gap-4">
-            {/* 左侧：封面、歌曲信息、控制按钮 */}
-            <div className="flex flex-col items-center flex-shrink-0 w-36">
-              {/* 封面 */}
-              {currentTrackData?.cover && (
-                <img 
-                  src={currentTrackData.cover} 
-                  alt={currentTrackData.name}
-                  className="w-36 h-36 rounded-lg object-cover mb-3 shadow-lg"
-                />
-              )}
-              
-              {/* 歌曲信息 */}
-              <div className="w-full text-center mb-3">
-                <div className="text-white font-semibold text-sm mb-1 line-clamp-2">
-                  {currentTrackData?.name || "未知歌曲"}
-                </div>
-                <div className="text-white/60 text-xs mb-1">
-                  {currentTrackData?.artist || "庄达菲"}
-                </div>
-                {isLoadingTrack && (
-                  <div className="text-xs text-aurora-purple">
-                    加载中...
-                  </div>
-                )}
-              </div>
-
-              {/* 控制按钮 - 居中 */}
-              <div className="flex items-center justify-center gap-2 w-full">
-                <button
-                  onClick={prevTrack}
-                  disabled={!hasMusic || playlist.length <= 1}
-                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-                >
-                  <SkipBack className="w-4 h-4 text-white" />
-                </button>
-                <button
-                  onClick={togglePlay}
-                  disabled={!hasMusic || isLoadingTrack}
-                  className="w-12 h-12 rounded-full bg-aurora-purple/20 hover:bg-aurora-purple/30 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-                >
-                  {isLoadingTrack ? (
-                    <Loader2 className="w-5 h-5 text-white animate-spin" />
-                  ) : isPlaying ? (
-                    <Pause className="w-5 h-5 text-white" />
-                  ) : (
-                    <Play className="w-5 h-5 text-white ml-0.5" />
-                  )}
-                </button>
-                <button
-                  onClick={nextTrack}
-                  disabled={!hasMusic || playlist.length <= 1}
-                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-                >
-                  <SkipForward className="w-4 h-4 text-white" />
-                </button>
-              </div>
-            </div>
-
-            {/* 右侧：歌词显示（只显示6行，带渐变效果） */}
-            <div className="flex-1 min-w-0 relative" style={{ height: '200px', contain: 'layout style paint' }}>
-              {currentTrackData?.lyrics && currentTrackData.lyrics.length > 0 && visibleLyrics.length > 0 ? (
-                <div className="relative w-full h-full overflow-hidden">
-                  {/* 歌词内容 */}
-                  <div 
-                    ref={lyricsRef}
-                    className="absolute inset-0 flex flex-col justify-center space-y-4 pl-8 pr-4"
-                    style={{ willChange: 'transform' }}
-                  >
-                    {visibleLyrics.map((lyric, idx) => {
-                      const originalIndex = lyric.originalIndex;
-                      const isCurrent = originalIndex === currentLyricIndex;
-                      const distance = Math.abs(originalIndex - currentLyricIndex);
-                      
-                      // 根据距离计算透明度和模糊度
-                      let opacity = 1;
-                      let blur = 0;
-                      let scale = 1;
-                      
-                      if (distance === 0) {
-                        // 当前歌词：最清晰
-                        opacity = 1;
-                        blur = 0;
-                        scale = 1.05;
-                      } else if (distance === 1) {
-                        // 相邻歌词：稍微模糊
-                        opacity = 0.7;
-                        blur = 2;
-                        scale = 1;
-                      } else {
-                        // 更远的歌词：更模糊
-                        opacity = 0.4;
-                        blur = 4;
-                        scale = 0.95;
-                      }
-                      
-                      return (
-                        <div
-                          key={originalIndex}
-                          className={`transition-all duration-500 leading-tight ${
-                            isCurrent
-                              ? 'text-white text-2xl font-semibold'
-                              : 'text-white/60 text-xl'
-                          }`}
-                          style={{
-                            opacity,
-                            filter: `blur(${blur}px)`,
-                            transform: `scale(${scale})`,
-                            lineHeight: '1.4',
-                            willChange: 'transform, opacity, filter',
-                          }}
-                        >
-                          {lyric.text || ' '}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <p className="text-white/40 text-base">
-                    {isLoadingTrack ? '正在加载歌词...' : '暂无歌词'}
-                  </p>
-                </div>
-              )}
-            </div>
+      {hasMusic && (
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={`backdrop-${currentTrackData.id}`}
+            className="player-backdrop"
+            aria-hidden="true"
+            initial={{ opacity: 0, scale: 1.08 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={playerSpring}
+          >
+            <Image
+              src={currentTrackData.cover}
+              alt=""
+              width={180}
+              height={180}
+              unoptimized
+            />
+          </motion.div>
+        </AnimatePresence>
+      )}
+      <div className="player-topline">
+        <span className="player-source">
+          <span className="player-eq" aria-hidden="true"><i /><i /><i /></span>
+          <a href={MUSIC_PLAYLIST_URL} target="_blank" rel="noopener noreferrer">
+            {playlistName} <ArrowUpRight size={13} aria-hidden="true" />
+          </a>
+        </span>
+        {hasMusic && (
+          <div className="player-topline-actions">
+            <span className="player-counter">{currentTrack + 1} / {playlist.length}</span>
+            <button ref={playlistButtonRef} type="button" className={`playlist-toggle${isPlaylistOpen ? " is-active" : ""}`} aria-expanded={isPlaylistOpen} aria-controls="music-playlist-picker" onClick={() => isPlaylistOpen ? closePlaylist() : setPlaylistOpen(true)}><ListMusic size={16} aria-hidden="true" /> 歌单</button>
           </div>
         )}
       </div>
 
-      {/* 错误提示 */}
-      {error && (
-        <div className="absolute bottom-2 left-2 right-2 text-xs text-red-400 bg-red-500/10 px-2 py-1 rounded">
-          {error}
+      {hasMusic && playlistTotal > playlist.length && (
+        <p className="playlist-availability">网易云共 {playlistTotal} 首 · 当前公开可读取 {playlist.length} 首</p>
+      )}
+      {isLoading ? (
+        <div className="player-state">
+          <Loader2 className="player-spinner" aria-hidden="true" />
+          <span>正在读取歌单</span>
         </div>
+      ) : hasMusic ? (
+        <div className="player-view-stack">
+        <div className="player-grid" style={isPlaylistOpen ? { visibility: "hidden" } : undefined} aria-hidden={isPlaylistOpen}>
+          <div className="cover-stage">
+            <AnimatePresence initial={false} custom={trackDirection} mode="popLayout">
+              <motion.div
+                key={currentTrackData.id}
+                className="cover-interaction"
+                custom={trackDirection}
+                variants={coverVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={playerSpring}
+                drag={prefersReducedMotion ? false : "x"}
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.16}
+                dragMomentum={false}
+                onDragEnd={(_, info) => {
+                  const projected = info.offset.x + projectVelocity(info.velocity.x);
+                  if (Math.abs(projected) < 72) {
+                    return;
+                  }
+                  if (projected < 0) {
+                    nextTrack();
+                  } else {
+                    previousTrack();
+                  }
+                }}
+                whileTap={{ scale: 0.985 }}
+                style={{ touchAction: "pan-y" }}
+              >
+                <Image
+                  src={currentTrackData.cover}
+                  alt={`${currentTrackData.name} 封面`}
+                  width={720}
+                  height={720}
+                  unoptimized
+                  priority={currentTrack === 0}
+                  className="player-cover"
+                />
+                <span className="cover-hint" aria-hidden="true">
+                  左右滑动切歌
+                </span>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          <div className="player-content">
+            <div className="track-heading">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={currentTrackData.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={playerSpring}
+                >
+                  <span className="track-kicker">{isPlaying ? "正在播放" : "来自网易云音乐"}</span>
+                  <h3>{currentTrackData.name}</h3>
+                  <p>{currentTrackData.artist}</p>
+                </motion.div>
+              </AnimatePresence>
+              {isLoadingTrack && (
+                <span className="track-loading">
+                  <Loader2 className="player-spinner" aria-hidden="true" /> 正在读取
+                </span>
+              )}
+            </div>
+
+            <div className="lyrics-window" aria-live="polite">
+              {visibleLyrics.length > 0 ? (
+                <div className="lyrics-stack">
+                  <AnimatePresence initial={false} mode="popLayout">
+                    {visibleLyrics.map((lyric) => {
+                      const distance = Math.abs(lyric.originalIndex - currentLyricIndex);
+                      const isCurrent = distance === 0;
+
+                      return (
+                        <motion.p
+                          layout="position"
+                          key={`${lyric.time}-${lyric.originalIndex}`}
+                          className={isCurrent ? "is-current" : ""}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{
+                            opacity: isCurrent ? 1 : distance === 1 ? 0.46 : 0.2,
+                            x: 0,
+                            y: 0,
+                          }}
+                          exit={{ opacity: 0, y: -8 }}
+                          transition={{ duration: 0.1, ease: "easeOut" }}
+                        >
+                          {lyric.text}
+                        </motion.p>
+                      );
+                    })}
+                  </AnimatePresence>
+                </div>
+              ) : (currentTrackData?.lyrics?.length ?? 0) > 0 ? (
+                <p className="lyrics-empty">间奏</p>
+              ) : (
+                <p className="lyrics-empty">
+                  {isLoadingTrack ? "正在读取歌词…" : "这首歌暂时没有歌词"}
+                </p>
+              )}
+            </div>
+
+            <div className="transport">
+              <div className="timeline">
+                <input
+                  type="range"
+                  min={0}
+                  max={duration || 1}
+                  step={0.1}
+                  value={Math.min(currentTime, duration || 0)}
+                  onChange={(event) => handleSeek(Number(event.target.value))}
+                  disabled={!duration}
+                  aria-label="播放进度"
+                  style={{ "--player-progress": `${progressPercent}%` } as CSSProperties}
+                />
+                <div className="time-row">
+                  <span>{formatTime(currentTime)}</span>
+                  <span>{formatTime(duration)}</span>
+                </div>
+              </div>
+
+              <div className="transport-row">
+                <button
+                  type="button"
+                  onClick={previousTrack}
+                  disabled={playlist.length <= 1}
+                  aria-label="播放上一首"
+                  className="transport-button"
+                >
+                  <SkipBack size={18} fill="currentColor" />
+                </button>
+                <button
+                  type="button"
+                  onClick={togglePlay}
+                  aria-label={isPlaying ? "暂停" : "播放"}
+                  className="transport-button transport-button-primary"
+                >
+                  {isPlaying ? (
+                    <Pause size={22} fill="currentColor" />
+                  ) : (
+                    <Play size={22} fill="currentColor" className="transport-play-icon" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={nextTrack}
+                  disabled={playlist.length <= 1}
+                  aria-label="播放下一首"
+                  className="transport-button"
+                >
+                  <SkipForward size={18} fill="currentColor" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {isPlaylistOpen && <PlaylistPicker tracks={playlist} currentIndex={currentTrack} onSelect={selectTrack} onClose={closePlaylist} />}
+        </div>
+      ) : (
+        <div className="player-state">歌单暂时不可用，稍后再来。</div>
       )}
 
-      {/* 隐藏的音频元素 */}
-      {hasMusic && currentTrackData?.playUrl && (
-        <audio
-          ref={audioRef}
-          src={currentTrackData.playUrl}
-          onEnded={nextTrack}
-          onError={(e) => {
-            console.error("音频加载错误:", e);
-            setError("音乐加载失败，请检查网络连接");
-            setIsPlaying(false);
-          }}
-          onLoadedData={() => {
-            setError(null);
-          }}
-          onCanPlay={() => {
-            setError(null);
-          }}
-          preload="metadata"
-        />
+      {error && (
+        <p role="alert" className="player-error">
+          {error}{" "}
+          <a href={currentTrackId ? `https://music.163.com/song?id=${currentTrackId}` : MUSIC_PLAYLIST_URL} target="_blank" rel="noopener noreferrer">在网易云打开 ↗</a>
+        </p>
       )}
-    </div>
+
+      <audio
+        ref={audioRef}
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={() => {
+          const nextDuration = audioRef.current?.duration ?? 0;
+          setDuration(Number.isFinite(nextDuration) ? nextDuration : 0);
+        }}
+        onDurationChange={() => {
+          const nextDuration = audioRef.current?.duration ?? 0;
+          setDuration(Number.isFinite(nextDuration) ? nextDuration : 0);
+        }}
+        onEnded={nextTrack}
+        onError={() => {
+          playRequestRef.current += 1;
+          setError("这首歌暂时无法在网页播放，可切换下一首或前往网易云收听。");
+          updatePlayingState(false);
+        }}
+        preload="none"
+      />
+    </section>
   );
 }

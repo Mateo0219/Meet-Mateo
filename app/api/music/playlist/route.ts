@@ -1,37 +1,27 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
+import { isValidResourceId } from "@/lib/music-security";
+import { MUSIC_CACHE_SECONDS, MUSIC_PLAYLIST_ID } from "@/lib/music-config";
+import { fetchNeteasePlaylist } from "@/lib/netease-playlist";
 
-/**
- * 获取庄达菲歌单列表
- */
+// Revalidate the complete snapshot; failed refreshes retain the last success.
+const getPlaylist = unstable_cache(
+  (id: string) => fetchNeteasePlaylist(id),
+  ["netease-playlist-v6"],
+  { revalidate: MUSIC_CACHE_SECONDS },
+);
+
 export async function GET(request: NextRequest) {
+  const id = request.nextUrl.searchParams.get("id") || MUSIC_PLAYLIST_ID;
+  if (!isValidResourceId(id)) {
+    return NextResponse.json({ error: "无效的歌单 ID" }, { status: 400 });
+  }
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const playlistId = searchParams.get('id') || '13049743731'; // 默认歌单 ID
-
-    const apiUrl = `https://music.api.randallanjie.com/api?server=netease&type=playlist&id=${playlistId}&auth=undefined&r=${Math.random()}`;
-
-    const response = await fetch(apiUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
+    return NextResponse.json(await getPlaylist(id), {
+      headers: { "Cache-Control": "no-cache" },
     });
-
-    if (!response.ok) {
-      throw new Error(`API 请求失败: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    return NextResponse.json(data);
-  } catch (error: any) {
-    console.error('获取歌单错误:', error);
-    return NextResponse.json(
-      { 
-        error: '获取歌单失败',
-        message: error.message 
-      },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    console.error("获取歌单错误:", error);
+    return NextResponse.json({ error: "暂时无法读取网易云歌单，请稍后重试" }, { status: 502 });
   }
 }
-

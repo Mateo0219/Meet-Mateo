@@ -1,86 +1,109 @@
 "use client";
 
-import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { ArrowUpRight, Github, Menu, X } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 const navItems = [
-  { name: "首页", href: "/" },
-  { name: "关于", href: "/#about" },
-  { name: "生活", href: "/#lifestyle" },
-  { name: "足球队", href: "/football" },
-  { name: "朋友圈", href: "/moments" },
-  { name: "联系", href: "/#contact" },
+  { name: "Mateo OS", href: "/", path: "/" },
+  { name: "足球", href: "/football", path: "/football" },
+  { name: "记录", href: "/moments", path: "/moments" },
 ] as const;
 
 export default function Header() {
+  const pathname = usePathname();
+  const prefersReducedMotion = useReducedMotion();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  return (
-    <header className="fixed top-0 left-0 right-0 z-50">
-      {/* 渐变背景 - 与主页面颜色完美适配 */}
-      <div 
-        className="w-full"
-        style={{
-          background: 'linear-gradient(to bottom, rgba(10, 10, 10, 0.95) 0%, rgba(10, 10, 10, 0.75) 30%, rgba(10, 10, 10, 0.5) 60%, rgba(10, 10, 10, 0) 100%)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)'
-        }}
-      >
-        <nav className="max-w-7xl mx-auto px-4 md:px-8 py-4">
-          <div className="flex items-center justify-between">
-            {/* Logo - 使用极光渐变 */}
-            <a
-              href="/"
-              className="text-xl font-bold text-aurora relative"
-            >
-              Portfolio
-            </a>
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsMobileMenuOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
-            {/* Desktop Navigation - 与主页面文字颜色一致 */}
-            <div className="hidden md:flex items-center gap-8">
-              {navItems.map((item) => (
-                <a
+  useEffect(() => setIsMobileMenuOpen(false), [pathname]);
+
+
+  const activeName = navItems.find((item) => item.path === pathname)?.name;
+
+  return (
+    <header className="global-header">
+      <nav className="page-frame nav-bar" aria-label="主导航">
+        <Link href="/" className="site-mark" aria-label="Mateo 首页">
+          <span className="brand-glyph" aria-hidden="true">M</span>
+          <span className="brand-name">Mateo</span>
+        </Link>
+
+        <div className="nav-capsule">
+          {navItems.map((item) => (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={activeName === item.name ? "is-active" : undefined}
+              aria-current={activeName === item.name ? "page" : undefined}
+            >
+              {activeName === item.name && (
+                <motion.span layoutId="nav-indicator" className="nav-indicator" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
+              )}
+              <span>{item.name}</span>
+            </Link>
+          ))}
+        </div>
+
+        <a href="https://github.com/mateo0219" target="_blank" rel="noopener noreferrer" className="nav-contact" aria-label="GitHub">
+          <Github size={16} aria-hidden="true" />
+        </a>
+
+        <button
+          type="button"
+          className="menu-button"
+          onClick={() => setIsMobileMenuOpen((open) => !open)}
+          aria-label={isMobileMenuOpen ? "关闭导航" : "打开导航"}
+          aria-expanded={isMobileMenuOpen}
+          aria-controls="mobile-navigation"
+        >
+          {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+        </button>
+      </nav>
+
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            id="mobile-navigation"
+            className="mobile-nav-wrap"
+            style={{ transformOrigin: "top right" }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.96 }}
+            transition={prefersReducedMotion ? { duration: 0.12 } : { type: "spring", stiffness: 420, damping: 32 }}
+          >
+            <nav className="mobile-nav" aria-label="移动导航">
+              {navItems.map((item, index) => (
+                <Link
                   key={item.name}
                   href={item.href}
-                  className="text-white/60 hover:text-white transition-colors relative group"
+                  className={activeName === item.name ? "is-active" : undefined}
+                  aria-current={activeName === item.name ? "page" : undefined}
+                  onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  {item.name}
-                  {/* 底部指示线 - 使用极光渐变 */}
-                  <span className="absolute -bottom-1 left-0 h-0.5 bg-gradient-to-r from-aurora-purple to-aurora-cyan w-0 group-hover:w-full transition-all duration-300" />
-                </a>
+                  <span>0{index + 1}</span>
+                  <strong>{item.name}</strong>
+                  <ArrowUpRight size={16} aria-hidden="true" />
+                </Link>
               ))}
-            </div>
-
-            {/* Mobile Menu Button */}
-            <button
-              className="md:hidden text-white/60 hover:text-white transition-colors"
-              onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-              aria-label="Toggle menu"
-              aria-expanded={isMobileMenuOpen}
-            >
-              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
-
-          {/* Mobile Menu - 使用 glass-card 样式 */}
-          {isMobileMenuOpen && (
-            <div className="md:hidden mt-4">
-              <div className="glass-card p-4 space-y-3">
-                {navItems.map((item) => (
-                  <a
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="block text-white/60 hover:text-white transition-colors py-2"
-                  >
-                    {item.name}
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-        </nav>
-      </div>
+              <a href="https://github.com/mateo0219" target="_blank" rel="noopener noreferrer">
+                <span>04</span>
+                <strong>GitHub</strong>
+                <ArrowUpRight size={16} aria-hidden="true" />
+              </a>
+            </nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

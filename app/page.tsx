@@ -1,17 +1,5 @@
-import Header from "@/components/Header";
-import Hero from "@/components/Hero";
-import About from "@/components/About";
-import Lifestyle from "@/components/Lifestyle";
-import Contact from "@/components/Contact";
+import MateoOS from "@/components/os/MateoOS";
 
 export default function Home() {
-  return (
-    <main className="min-h-screen">
-      <Header />
-      <Hero />
-      <About />
-      <Lifestyle />
-      <Contact />
-    </main>
-  );
+  return <MateoOS />;
 }

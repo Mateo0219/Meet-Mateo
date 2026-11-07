@@ -1,42 +1,78 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
+import { isValidResourceId } from "@/lib/music-security";
 
-/**
- * 获取歌词
- */
+const NETEASE_LYRICS_URL = "https://music.163.com/api/song/lyric";
+const MAX_LYRICS_BYTES = 512_000;
+
+function extractLyrics(data: unknown): string | null {
+  if (!data || typeof data !== "object" || !("lrc" in data)) {
+    return null;
+  }
+
+  const lrc = data.lrc;
+  if (!lrc || typeof lrc !== "object" || !("lyric" in lrc)) {
+    return null;
+  }
+
+  return typeof lrc.lyric === "string" ? lrc.lyric : null;
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const lrcUrl = searchParams.get('url');
-
-    if (!lrcUrl) {
-      return NextResponse.json(
-        { error: '请提供歌词 URL' },
-        { status: 400 }
-      );
+    const songId = request.nextUrl.searchParams.get("id");
+    if (!songId || !isValidResourceId(songId)) {
+      return NextResponse.json({ error: "无效的歌曲 ID" }, { status: 400 });
     }
 
-    const response = await fetch(lrcUrl, {
+    const apiUrl = new URL(NETEASE_LYRICS_URL);
+    apiUrl.search = new URLSearchParams({
+      id: songId,
+      lv: "1",
+      kv: "1",
+      tv: "-1",
+    }).toString();
+
+    const response = await fetch(apiUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        Referer: "https://music.163.com/",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
       },
+      redirect: "error",
+      signal: AbortSignal.timeout(8_000),
+      next: { revalidate: 86_400 },
     });
 
     if (!response.ok) {
-      throw new Error(`API 请求失败: ${response.status}`);
+      throw new Error(`网易云歌词请求失败: ${response.status}`);
     }
 
-    const lyrics = await response.text();
+    const contentLength = Number(response.headers.get("content-length") || 0);
+    if (contentLength > MAX_LYRICS_BYTES) {
+      throw new Error("歌词响应过大");
+    }
 
-    return NextResponse.json({ lyrics });
-  } catch (error: any) {
-    console.error('获取歌词错误:', error);
+    const body = await response.text();
+    if (new TextEncoder().encode(body).byteLength > MAX_LYRICS_BYTES) {
+      throw new Error("歌词响应过大");
+    }
+
+    const lyrics = extractLyrics(JSON.parse(body) as unknown);
+    if (lyrics === null) {
+      throw new Error("歌词响应格式无效");
+    }
+
     return NextResponse.json(
-      { 
-        error: '获取歌词失败',
-        message: error.message 
-      },
-      { status: 500 }
+      { lyrics },
+      {
+        headers: {
+          "Cache-Control":
+            "public, s-maxage=86400, stale-while-revalidate=604800",
+        },
+      }
     );
+  } catch (error: unknown) {
+    console.error("获取歌词错误:", error);
+    return NextResponse.json({ error: "获取歌词失败" }, { status: 502 });
   }
 }
-
