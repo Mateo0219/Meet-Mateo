@@ -1,11 +1,6 @@
-import type { Metadata } from "next";
-import WorldShell from "@/components/world/WorldShell";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Mateo 岛",
-  description: "今天换你来当 Mateo：一座可以走进去逛的小岛。",
-};
-
+// The island is the home page now; keep the old address working.
 export default function WorldPage() {
-  return <WorldShell />;
+  redirect("/");
 }

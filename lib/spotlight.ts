@@ -6,7 +6,7 @@ import type { SwatchName } from "./poster";
 export type SpotlightAction =
   | { type: "app"; id: AppId; payload?: string }
   | { type: "link"; href: string }
-  | { type: "command"; command: "regenerate" | "lock" };
+  | { type: "command"; command: "regenerate" };
 
 export interface SpotlightItem {
   id: string;
@@ -34,7 +34,7 @@ export function buildSpotlightIndex(): SpotlightItem[] {
       title: note.title,
       subtitle: `备忘录 · ${note.preview}`,
       group: "备忘录" as const,
-      // Index the full body so content words ("足球") find the note, not just its title.
+      // Index the full body so content words ("乒乓") find the note, not just its title.
       keywords: [
         note.folder,
         ...note.blocks.flatMap((block) => (block.type === "list" ? block.items.flatMap((item) => [item.title, item.text]) : [block.text])),
@@ -52,7 +52,6 @@ export function buildSpotlightIndex(): SpotlightItem[] {
       action: { type: "app" as const, id: "fragments" as const, payload: fragment.id },
     })),
     { id: "cmd:regenerate", title: "重新生成此刻", subtitle: "操作 · 换一个随机种子", group: "操作", keywords: ["regenerate", "seed", "壁纸", "配色"], swatch: "yellow", action: { type: "command", command: "regenerate" } },
-    { id: "cmd:lock", title: "锁定屏幕", subtitle: "操作", keywords: ["lock", "锁屏"], group: "操作", swatch: "night", action: { type: "command", command: "lock" } },
     { id: "link:github", title: "GitHub", subtitle: "链接 · @mateo0219", group: "操作", keywords: ["github", "code", "源码"], swatch: "night", action: { type: "link", href: GITHUB_URL } },
   ];
 }

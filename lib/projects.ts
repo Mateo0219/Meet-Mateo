@@ -23,11 +23,11 @@ export interface Project {
 export const projects: Project[] = [
   {
     id: "meet-mateo",
-    name: "Mateo OS",
+    name: "Mateo 岛",
     tagline: "把灵感、爱好和日常，收进一个可以探索的个人空间。全程 vibe coding。",
     status: "持续迭代",
     tags: ["Vibe Coding", "Next.js", "TypeScript", "Motion"],
-    media: [{ type: "image", src: "/scenes/work.webp", alt: "Mateo OS 工作台场景" }],
+    media: [{ type: "image", src: "/scenes/work.webp", alt: "Mateo 的工作台场景" }],
     links: [
       { kind: "external", label: "GitHub", href: "https://github.com/Mateo0219/Meet-Mateo", primary: true },
       { kind: "note", label: "这个网站是怎么做的", noteId: "site" },

@@ -17,7 +17,6 @@ export type TerminalEffect =
   | { type: "regenerate" }
   | { type: "clear" }
   | { type: "link"; href: string }
-  | { type: "lock" }
   | { type: "close" };
 
 export interface TerminalResult {
@@ -37,14 +36,13 @@ export const terminalCommands = [
   ["whoami", "我是谁"],
   ["ls", "列出桌面上的文件"],
   ["cat <文件>", "读一个文件，比如 cat 关于我.md"],
-  ["open <应用>", "打开应用：此刻 碎片 乒乓球 朋友圈 备忘录 足球 llms"],
+  ["open <应用>", "打开应用：此刻 碎片 乒乓球 朋友圈 备忘录 llms"],
   ["weather", "北京现在的天气"],
   ["date", "北京现在的时间"],
   ["birthday", "离下一次生日还有多久"],
   ["sample [温度]", "按温度采样一句自我介绍，比如 sample 1.2"],
   ["regenerate", "重新生成此刻的配色和版式"],
   ["github", "打开 GitHub"],
-  ["lock", "锁定屏幕"],
   ["clear", "清屏"],
   ["exit", "关闭终端"],
 ] as const;
@@ -61,8 +59,6 @@ const openTargets: Record<string, { app: AppId; payload?: string }> = {
   notes: { app: "notes" },
   关于: { app: "notes", payload: "about" },
   about: { app: "about" },
-  足球: { app: "notes", payload: "football" },
-  football: { app: "notes", payload: "football" },
   记录: { app: "moments" },
   moments: { app: "moments" },
   llms: { app: "llms" },
@@ -73,7 +69,6 @@ const openTargets: Record<string, { app: AppId; payload?: string }> = {
 
 const files: Record<string, string | { app: AppId; payload?: string }> = {
   "关于我.md": "about",
-  "足球笔记.md": "football",
   "llms.txt": { app: "llms" },
 };
 
@@ -106,9 +101,9 @@ export function runCommand(raw: string, context: TerminalContext): TerminalResul
         ],
       };
     case "whoami":
-      return { lines: [{ text: "mateo", tone: "lime" }, { text: "在北京 vibe coding、踢球、听歌。", tone: "muted" }] };
+      return { lines: [{ text: "mateo", tone: "lime" }, { text: "在北京 vibe coding、打乒乓、听歌。", tone: "muted" }] };
     case "ls":
-      return { lines: [{ text: "关于我.md   足球笔记.md   llms.txt   Meet-Mateo@", tone: "blue" }] };
+      return { lines: [{ text: "关于我.md   llms.txt   Meet-Mateo@", tone: "blue" }] };
     case "cat": {
       if (!argument) return { lines: [{ text: "用法：cat <文件>", tone: "muted" }] };
       const file = files[argument];
@@ -120,7 +115,7 @@ export function runCommand(raw: string, context: TerminalContext): TerminalResul
       if (!argument) return { lines: [{ text: "用法：open <应用>", tone: "muted" }] };
       if (argument.toLowerCase() === "github") return { lines: [{ text: "正在打开 GitHub…", tone: "muted" }], effect: { type: "link", href: GITHUB_URL } };
       const target = openTargets[argument.toLowerCase()] ?? openTargets[argument];
-      if (!target) return { lines: [{ text: `open: 找不到「${argument}」`, tone: "error" }, { text: "试试：此刻 碎片 乒乓球 朋友圈 备忘录 足球 llms", tone: "muted" }] };
+      if (!target) return { lines: [{ text: `open: 找不到「${argument}」`, tone: "error" }, { text: "试试：此刻 碎片 乒乓球 朋友圈 备忘录 llms", tone: "muted" }] };
       return { lines: [{ text: `正在打开 ${argument}…`, tone: "muted" }], effect: { type: "open", ...target } };
     }
     case "weather":
@@ -161,8 +156,6 @@ export function runCommand(raw: string, context: TerminalContext): TerminalResul
       return { lines: [{ text: "已换一个随机种子。", tone: "yellow" }], effect: { type: "regenerate" } };
     case "github":
       return { lines: [{ text: "正在打开 GitHub…", tone: "muted" }], effect: { type: "link", href: GITHUB_URL } };
-    case "lock":
-      return { lines: [], effect: { type: "lock" } };
     case "clear":
       return { lines: [], effect: { type: "clear" } };
     case "exit":

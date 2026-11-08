@@ -1,5 +1,5 @@
-import MateoOS from "@/components/os/MateoOS";
+import WorldShell from "@/components/world/WorldShell";
 
 export default function Home() {
-  return <MateoOS />;
+  return <WorldShell />;
 }

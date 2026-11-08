@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Camera, ChevronLeft, ChevronRight, Heart, ImagePlus, LogOut, MapPin, Trash2, X } from "lucide-react";
 import { formatMomentTime, MAX_IMAGES, MAX_LOCATION, MAX_TEXT, type Moment, type MomentsPage } from "@/lib/moments";
-import { AVATAR_SRC } from "../Widgets";
+import { AVATAR_SRC } from "@/lib/os-apps";
 
 const LIKED_KEY = "mateo-moments-liked";
 const MAX_EDGE = 1600;

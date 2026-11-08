@@ -10,7 +10,7 @@ const PROMPT = "mateo@beijing ~ %";
 const commandNames = terminalCommands.map(([name]) => name.split(" ")[0]);
 
 export default function TerminalApp() {
-  const { clock, weather, birthday, openApp, regenerate, lock, closeApp } = useOS();
+  const { clock, weather, birthday, openApp, regenerate, closeApp } = useOS();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [input, setInput] = useState("");
   const history = useRef<string[]>([]);
@@ -24,7 +24,7 @@ export default function TerminalApp() {
     welcomed.current = true;
     setEntries([
       { kind: "output", line: { text: `Last login: ${clock.weekday} ${clock.date} ${clock.time} on ttys001`, tone: "muted" } },
-      { kind: "output", line: { text: "欢迎来到 Mateo OS。输入 help 查看可用命令。", tone: "lime" } },
+      { kind: "output", line: { text: "欢迎来到 Mateo 岛。输入 help 查看可用命令。", tone: "lime" } },
     ]);
   }, [clock]);
 
@@ -60,7 +60,6 @@ export default function TerminalApp() {
     if (effect.type === "open") openApp(effect.app, { payload: effect.payload, origin: null });
     if (effect.type === "regenerate") regenerate();
     if (effect.type === "link") window.open(effect.href, "_blank", "noopener,noreferrer");
-    if (effect.type === "lock") lock();
     if (effect.type === "close") closeApp("terminal");
   };
 

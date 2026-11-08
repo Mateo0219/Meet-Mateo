@@ -61,10 +61,10 @@ describe("projectFragments", () => {
 
 describe("nearestFragments", () => {
   it("returns other fragments ordered by similarity", () => {
-    const near = nearestFragments(fragments, "midfield", 3);
+    const near = nearestFragments(fragments, "blur-to-ui", 3);
     expect(near).toHaveLength(3);
-    expect(near.map((fragment) => fragment.id)).not.toContain("midfield");
-    expect(near[0].kind).toBe("sport");
+    expect(near.map((fragment) => fragment.id)).not.toContain("blur-to-ui");
+    expect(near[0].kind).toBe("make");
   });
 
   it("returns nothing for an unknown id", () => {

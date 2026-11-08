@@ -26,7 +26,7 @@ export interface Fragment {
   tags: Partial<Record<Facet, number>>;
   /** External link. */
   href?: string;
-  /** App to open inside Mateo OS. */
+  /** App to open on the island. */
   opens?: { app: AppId; payload?: string };
   action?: string;
   /** Labels filled in from live data at render time. */
@@ -37,18 +37,13 @@ export const fragments: Fragment[] = [
   { id: "rhythm-focus", kind: "music", label: "用节奏调节注意力", detail: "vibe coding 的时候，歌的节奏决定了我能专注多久。", shape: "pill", tags: { 音乐: 1, 节奏: 0.8, 专注: 0.7, 创造: 0.25 } },
   { id: "mood-archive", kind: "music", label: "保存每段时间的情绪", detail: "回头听某首歌，会想起当时在做什么、在想什么。", shape: "card", tags: { 音乐: 0.9, 情绪: 1 } },
 
-  { id: "midfield", kind: "sport", label: "中场", detail: "我在场上的位置。要看全局，也要接得住球。", shape: "round", tags: { 运动: 1, 空间: 0.8, 团队: 0.7 }, opens: { app: "notes", payload: "football" }, action: "读足球笔记" },
-  { id: "see-space", kind: "sport", label: "先看空间，再决定动作", detail: "好的跑位往往发生在拿球之前。", shape: "card", tags: { 运动: 0.8, 空间: 1, 判断: 0.8, 创造: 0.3 }, opens: { app: "notes", payload: "football" }, action: "读足球笔记" },
-  { id: "trust", kind: "sport", label: "相信队友", detail: "一次回追、一脚传球、一次主动补位。信任在球场上从来不是抽象词。", shape: "pill", tags: { 运动: 0.8, 团队: 1, 情绪: 0.3 } },
-  { id: "stay-rhythm", kind: "sport", label: "留在节奏里", detail: "比分会变，体力会掉。真正稳定的是注意力。", shape: "pill", tags: { 运动: 0.7, 节奏: 1, 专注: 0.6 } },
-  { id: "keep-running", kind: "sport", label: "失误了，下一次继续跑", detail: "有失误也没关系，下一次继续跑。", shape: "card", tags: { 运动: 0.7, 迭代: 0.9, 情绪: 0.3 } },
   { id: "pingpong", kind: "sport", label: "乒乓 · 旋转", detail: "旋转很快，注意力要更快。", shape: "pill", tags: { 运动: 1, 专注: 0.9, 节奏: 0.6 } },
 
   { id: "meet-mateo", kind: "make", label: "Meet-Mateo", detail: "就是你正在看的这个网站，一直在改。", shape: "pill", tags: { 创造: 1, 迭代: 0.6, 好奇: 0.4 }, href: "https://github.com/Mateo0219/Meet-Mateo", action: "看源码" },
   { id: "blur-to-ui", kind: "make", label: "把模糊，变成界面", detail: "把还说不清的念头拆成结构、交互和可以被真实使用的产品。", shape: "card", tags: { 创造: 1, 判断: 0.7, 好奇: 0.3 } },
   { id: "touchable", kind: "make", label: "可触摸的界面", detail: "把想法尽快变成能点、能拖、能用的东西。", shape: "pill", tags: { 创造: 1, 空间: 0.35, 迭代: 0.3 } },
-  { id: "not-final", kind: "make", label: "第一版不是结论", detail: "像判断下一次跑位一样，让东西持续接近它该有的样子。", shape: "pill", tags: { 创造: 0.7, 迭代: 1, 判断: 0.4, 运动: 0.15 } },
-  { id: "feel-first", kind: "make", label: "先感受，再定义", detail: "音乐、球场、街道与日常都是输入。先把注意力放进去，答案才开始成形。", shape: "card", tags: { 创造: 0.5, 情绪: 0.6, 判断: 0.7, 好奇: 0.4 } },
+  { id: "not-final", kind: "make", label: "第一版不是结论", detail: "让东西持续接近它该有的样子。", shape: "pill", tags: { 创造: 0.7, 迭代: 1, 判断: 0.4, 运动: 0.15 } },
+  { id: "feel-first", kind: "make", label: "先感受，再定义", detail: "音乐、街道与日常都是输入。先把注意力放进去，答案才开始成形。", shape: "card", tags: { 创造: 0.5, 情绪: 0.6, 判断: 0.7, 好奇: 0.4 } },
 
   { id: "beijing", kind: "life", label: "北京", detail: "现在生活的城市。首页的时间和天气都来自这里。", shape: "round", tags: { 生活: 1, 空间: 0.4 } },
   { id: "birthday", kind: "life", label: "生日轨道", detail: "离下一次生日还有多久，每一次绕行都算数。", shape: "pill", tags: { 生活: 1, 节奏: 0.4 }, live: "birthday" },

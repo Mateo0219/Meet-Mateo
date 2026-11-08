@@ -10,7 +10,7 @@ const index = buildSpotlightIndex();
 
 /** Opened from the keyboard many times a day, so it appears instantly — no animation. */
 export default function Spotlight() {
-  const { spotlightOpen, setSpotlightOpen, openApp, regenerate, lock } = useOS();
+  const { spotlightOpen, setSpotlightOpen, openApp, regenerate } = useOS();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -55,7 +55,6 @@ export default function Spotlight() {
     if (action.type === "app") openApp(action.id, { payload: action.payload, origin: null });
     else if (action.type === "link") window.open(action.href, "_blank", "noopener,noreferrer");
     else if (action.command === "regenerate") regenerate();
-    else if (action.command === "lock") lock();
   };
 
   return (

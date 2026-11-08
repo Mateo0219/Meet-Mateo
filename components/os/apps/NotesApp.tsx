@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowUpRight, ChevronLeft, Search } from "lucide-react";
 import { noteById, notes, type Note } from "@/lib/notes";
 
-const folders: Note["folder"][] = ["关于", "运动", "这台电脑"];
+const folders: Note["folder"][] = ["关于", "运动", "这座岛"];
 
 export default function NotesApp({ payload, navigationId, compact = false }: { payload?: string; navigationId: number; compact?: boolean }) {
   const [selectedId, setSelectedId] = useState(payload && noteById[payload] ? payload : "about");

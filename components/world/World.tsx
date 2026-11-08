@@ -4,8 +4,8 @@
 
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { ARRIVAL_LINES, followRoute, maps, THOUGHT_REACH, TODOS, WALK_SPEED, type GameMap, type MapId, type Place, type Point, type TodoId } from "@/lib/world";
+import { AVATAR_SRC } from "@/lib/os-apps";
 import { useOS } from "../os/OSProvider";
-import { AVATAR_SRC } from "../os/Widgets";
 import { buildGround, buildSprites, drawClockHands, drawFlames, drawMateo, drawSteam, drawThought, drawTrain, lightsFor, RENDER_SCALE, type Actor, type Light, type Sprite } from "./art";
 
 const STORAGE_KEY = "mateo-world-day";
@@ -151,7 +151,7 @@ export default function World() {
     const params = new URLSearchParams(window.location.search);
     const requested = params.get("t");
     if (requested === "day" || requested === "dusk" || requested === "night") setForcedPeriod(requested);
-    if (params.has("skip")) setOpening(false);
+    if (params.has("skip") || window.location.hash) setOpening(false);
     const state = game.current;
     try {
       const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}") as { thoughts?: unknown; todos?: unknown; revealed?: unknown };

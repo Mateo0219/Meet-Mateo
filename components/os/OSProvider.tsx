@@ -9,7 +9,6 @@ import {
   useReducer,
   useRef,
   useState,
-  type MutableRefObject,
   type ReactNode,
 } from "react";
 import { appById, type AppId } from "@/lib/os-apps";
@@ -28,9 +27,8 @@ import {
   type WindowManagerState,
 } from "@/lib/window-manager";
 
-export const MENU_BAR_HEIGHT = 54;
-export const DOCK_SPACE = 104;
-const UNLOCK_KEY = "mateo-os-unlocked";
+/** Windows keep this much of the world visible above and below them. */
+const WINDOW_MARGIN = 24;
 const DEFAULT_TEMPERATURE = 0.7;
 
 interface OpenOptions {
@@ -41,12 +39,6 @@ interface OpenOptions {
 interface OSContextValue {
   ready: boolean;
   isMobile: boolean;
-  locked: boolean;
-  /** True when the session was already unlocked, so the lock screen leaves without a transition. */
-  restoredSession: boolean;
-  unlock: () => void;
-  lock: () => void;
-
   clock: BeijingClock | null;
   isNight: boolean;
   birthday: BirthdayProgress | null;
@@ -68,7 +60,6 @@ interface OSContextValue {
   closeApp: (id: AppId) => void;
   minimizeApp: (id: AppId) => void;
   toggleMaximize: (id: AppId) => void;
-  dockIcons: MutableRefObject<Map<AppId, HTMLElement>>;
 
   spotlightOpen: boolean;
   setSpotlightOpen: (open: boolean) => void;
@@ -82,17 +73,9 @@ export function useOS(): OSContextValue {
   return value;
 }
 
-export function rectOf(element: Element | null | undefined): Rect | null {
-  if (!element) return null;
-  const { x, y, width, height } = element.getBoundingClientRect();
-  return { x, y, width, height };
-}
-
 export default function OSProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [locked, setLocked] = useState(false);
-  const [restoredSession, setRestoredSession] = useState(false);
   const [clock, setClock] = useState<BeijingClock | null>(null);
   const [birthday, setBirthday] = useState<BirthdayProgress | null>(null);
   const [weather, setWeather] = useState<BeijingWeather | null>(null);
@@ -102,7 +85,6 @@ export default function OSProvider({ children }: { children: ReactNode }) {
   const [windows, dispatch] = useReducer(windowReducer, initialWindowState);
   const [viewport, setViewport] = useState({ width: 1440, height: 900 });
   const [spotlightOpen, setSpotlightOpen] = useState(false);
-  const dockIcons = useRef(new Map<AppId, HTMLElement>());
   const handledHash = useRef<string | null>(null);
 
   // Time, chance and viewport are client-only; the server renders the space overview.
@@ -116,11 +98,6 @@ export default function OSProvider({ children }: { children: ReactNode }) {
     const firstSeed = randomSeed();
     setSeed(firstSeed);
     setChoice(sampleSentence(createRandom(firstSeed + 1), DEFAULT_TEMPERATURE));
-    if (window.sessionStorage.getItem(UNLOCK_KEY) === "1") {
-      setRestoredSession(true);
-      setLocked(false);
-    }
-
     const media = window.matchMedia("(max-width: 760px)");
     const measure = () => {
       setViewport({ width: window.innerWidth, height: window.innerHeight });
@@ -170,22 +147,11 @@ export default function OSProvider({ children }: { children: ReactNode }) {
   const composition = useMemo(() => composePoster(seed, isNight), [seed, isNight]);
 
   const workArea = useMemo<Rect>(
-    () => ({ x: 0, y: MENU_BAR_HEIGHT, width: viewport.width, height: Math.max(320, viewport.height - MENU_BAR_HEIGHT - DOCK_SPACE) }),
+    () => ({ x: 0, y: WINDOW_MARGIN, width: viewport.width, height: Math.max(320, viewport.height - WINDOW_MARGIN * 2) }),
     [viewport],
   );
 
   useEffect(() => dispatch({ type: "reflow", area: workArea }), [workArea]);
-
-  const unlock = useCallback(() => {
-    setLocked(false);
-    window.sessionStorage.setItem(UNLOCK_KEY, "1");
-  }, []);
-
-  const lock = useCallback(() => {
-    setRestoredSession(false);
-    setLocked(true);
-    window.sessionStorage.removeItem(UNLOCK_KEY);
-  }, []);
 
   const regenerate = useCallback(() => {
     const next = randomSeed();
@@ -200,15 +166,15 @@ export default function OSProvider({ children }: { children: ReactNode }) {
   const openApp = useCallback(
     (id: AppId, options: OpenOptions = {}) => {
       if (!appById[id]) return;
-      dispatch({ type: "open", id, area: workArea, origin: options.origin ?? rectOf(dockIcons.current.get(id)), payload: options.payload });
+      dispatch({ type: "open", id, area: workArea, origin: options.origin, payload: options.payload });
     },
     [workArea],
   );
 
   // Detail-page links remain meaningful on both fresh and restored sessions.
-  // Consume each URL change once; resizing or unlocking again must not reopen it.
+  // Consume each URL change once; resizing must not reopen it.
   useEffect(() => {
-    if (!ready || locked) return;
+    if (!ready) return;
     const navigate = () => {
       const hash = window.location.hash;
       if (handledHash.current === hash) return;
@@ -220,34 +186,21 @@ export default function OSProvider({ children }: { children: ReactNode }) {
     navigate();
     window.addEventListener("hashchange", navigate);
     return () => window.removeEventListener("hashchange", navigate);
-  }, [ready, locked, openApp]);
-
-  // The focused control is about to disappear; hand focus to where the app can be reopened.
-  // Apps outside the Dock can be restored through the Mateo OS menu.
-  const focusLauncher = useCallback((id: AppId) => {
-    const launcher = dockIcons.current.get(id) ?? document.querySelector<HTMLElement>(".space-brand");
-    launcher?.focus({ preventScroll: true });
-  }, []);
+  }, [ready, openApp]);
 
   const closeApp = useCallback((id: AppId) => {
     dispatch({ type: "close", id });
-    focusLauncher(id);
-  }, [focusLauncher]);
+  }, []);
 
   const minimizeApp = useCallback((id: AppId) => {
-    dispatch({ type: "minimize", id, target: rectOf(dockIcons.current.get(id)) });
-    focusLauncher(id);
-  }, [focusLauncher]);
+    dispatch({ type: "minimize", id });
+  }, []);
 
   const toggleMaximize = useCallback((id: AppId) => dispatch({ type: "toggleMaximize", id, area: workArea }), [workArea]);
 
   const value: OSContextValue = {
     ready,
     isMobile,
-    locked,
-    restoredSession,
-    unlock,
-    lock,
     clock,
     isNight,
     birthday,
@@ -267,7 +220,6 @@ export default function OSProvider({ children }: { children: ReactNode }) {
     closeApp,
     minimizeApp,
     toggleMaximize,
-    dockIcons,
     spotlightOpen,
     setSpotlightOpen,
   };

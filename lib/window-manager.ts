@@ -64,7 +64,7 @@ export function defaultRect(id: AppId, area: Rect, stackIndex: number): Rect {
   const width = Math.min(size.width, area.width - 32);
   const height = Math.min(size.height, area.height - 24);
   const offset = (stackIndex % 6) * 28;
-  // Cascade, but never open past the work area and underneath the Dock.
+  // Cascade, but never open past the work area.
   const x = Math.min(area.x + (area.width - width) / 2 + offset - 70, area.x + area.width - width);
   const y = Math.min(area.y + Math.max(12, (area.height - height) / 2 - 20) + offset, area.y + area.height - height);
   return clampRect({ width, height, x, y }, area);

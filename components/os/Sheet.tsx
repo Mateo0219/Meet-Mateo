@@ -1,20 +1,15 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { animate, AnimatePresence, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
-import { appById, apps, type AppId } from "@/lib/os-apps";
+import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
+import { appById, type AppId } from "@/lib/os-apps";
 import AppContent from "./apps/AppContent";
-import AppIcon from "./AppIcon";
-import { rectOf, useOS } from "./OSProvider";
-import { OrbitWidget, ProfileWidget, WeatherWidget } from "./Widgets";
-
-const dockApps: AppId[] = ["now", "fragments", "pingpong", "moments"];
-const gridApps = apps.filter((app) => !dockApps.includes(app.id));
+import { useOS } from "./OSProvider";
 
 /** Momentum projection from Apple's sample code (decelerationRate 0.99, snappier). */
 const project = (velocity: number, rate = 0.99) => ((velocity / 1000) * rate) / (1 - rate);
 
-export function Sheet({ id }: { id: AppId }) {
+export default function Sheet({ id }: { id: AppId }) {
   const { windows, closeApp } = useOS();
   const reducedMotion = useReducedMotion();
   // Pixels, not "100%": the scrim is derived from this value and needs a number.
@@ -97,48 +92,5 @@ export function Sheet({ id }: { id: AppId }) {
         </div>
       </motion.div>
     </>
-  );
-}
-
-export default function MobileHome() {
-  const { clock, weather, activeId, windows, openApp, closeApp } = useOS();
-
-  // Launching from the home screen starts fresh; apps opening apps stack up for "back".
-  const launch = (id: AppId, element: HTMLElement) => {
-    windows.windows.forEach((window) => closeApp(window.id));
-    openApp(id, { origin: rectOf(element) });
-  };
-
-  const icon = (id: AppId) => {
-    const app = appById[id];
-    return (
-      <button key={id} type="button" className="ios-app" aria-label={app.name} onClick={(event) => launch(id, event.currentTarget)}>
-        <span className="ios-app-icon">
-          <AppIcon icon={app.icon} swatch={app.swatch} />
-        </span>
-        <span className="ios-app-label">{app.name}</span>
-      </button>
-    );
-  };
-
-  return (
-    <div className="ios">
-      <div className="ios-status">
-        <span>{clock?.time ?? ""}</span>
-        <span>{weather ? `北京 ${weather.temperature}° ${weather.label}` : "北京"}</span>
-      </div>
-      <div className="ios-home">
-        <ProfileWidget />
-        <div className="widget-row">
-          <WeatherWidget />
-          <OrbitWidget />
-        </div>
-        <div className="ios-grid">{gridApps.map((app) => icon(app.id))}</div>
-      </div>
-      <nav className="ios-dock" aria-label="程序坞">
-        {dockApps.map((id) => icon(id))}
-      </nav>
-      <AnimatePresence>{activeId && <Sheet key={activeId} id={activeId} />}</AnimatePresence>
-    </div>
   );
 }

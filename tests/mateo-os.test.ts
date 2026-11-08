@@ -62,8 +62,8 @@ describe("window manager", () => {
 
   it("updates the payload when an open window is asked for something else", () => {
     let state = open(initialWindowState, "notes", "about");
-    state = open(state, "notes", "football");
-    expect(state.windows.find((window) => window.id === "notes")?.payload).toBe("football");
+    state = open(state, "notes", "pingpong");
+    expect(state.windows.find((window) => window.id === "notes")?.payload).toBe("pingpong");
   });
 
   it("passes focus on when the front window is minimized, and restores it on open", () => {
@@ -142,8 +142,8 @@ describe("spotlight", () => {
   });
 
   it("finds notes and fragments by their content", () => {
-    expect(searchSpotlight(index, "足球").some((item) => item.id === "note:football")).toBe(true);
-    expect(searchSpotlight(index, "中场").some((item) => item.id === "fragment:midfield")).toBe(true);
+    expect(searchSpotlight(index, "旋转很快").some((item) => item.id === "note:pingpong")).toBe(true);
+    expect(searchSpotlight(index, "保持好奇").some((item) => item.id === "fragment:curious")).toBe(true);
   });
 
   it("requires every term to match", () => {
@@ -167,7 +167,8 @@ describe("terminal", () => {
   it("opens apps and notes", () => {
     expect(runCommand("open 乒乓球", context).effect).toEqual({ type: "open", app: "pingpong" });
     expect(runCommand("open 朋友圈", context).effect).toEqual({ type: "open", app: "moments" });
-    expect(runCommand("open 足球", context).effect).toEqual({ type: "open", app: "notes", payload: "football" });
+    expect(runCommand("open 关于", context).effect).toEqual({ type: "open", app: "notes", payload: "about" });
+    expect(runCommand("open 足球", context).lines[0].tone).toBe("error");
     expect(runCommand("open nowhere", context).lines[0].tone).toBe("error");
   });
 
@@ -199,7 +200,7 @@ describe("terminal", () => {
 describe("notes", () => {
   it("has unique ids that the rest of the OS can link to", () => {
     expect(new Set(notes.map((note) => note.id)).size).toBe(notes.length);
-    for (const id of ["about", "football", "how", "site"]) expect(noteById[id]).toBeDefined();
+    for (const id of ["about", "pingpong", "how", "site"]) expect(noteById[id]).toBeDefined();
     expect(appById.notes).toBeDefined();
   });
 });

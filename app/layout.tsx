@@ -9,10 +9,10 @@ export const metadata: Metadata = {
     default: "Mateo Jiang",
     template: "%s — Mateo Jiang",
   },
-  description: "Mateo OS：一个持续生长的个人空间。在北京 vibe coding、打乒乓球、听歌。",
+  description: "Mateo 岛：今天换你来当 Mateo。一座可以走进去逛的小岛。",
   openGraph: {
     title: "Mateo Jiang",
-    description: "Vibe Coding、乒乓球、生活碎片。欢迎来到 Mateo 的个人空间。",
+    description: "Vibe Coding、乒乓球、生活碎片。欢迎来到 Mateo 岛。",
     type: "website",
     locale: "zh_CN",
   },
