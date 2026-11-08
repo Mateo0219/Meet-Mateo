@@ -1,14 +1,14 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { animate, AnimatePresence, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import { appById, apps, type AppId } from "@/lib/os-apps";
 import AppContent from "./apps/AppContent";
 import AppIcon from "./AppIcon";
 import { rectOf, useOS } from "./OSProvider";
-import { OrbitWidget, ProfileWidget, SongWidget, WeatherWidget } from "./Widgets";
+import { OrbitWidget, ProfileWidget, WeatherWidget } from "./Widgets";
 
-const dockApps: AppId[] = ["now", "fragments", "music", "notes"];
+const dockApps: AppId[] = ["now", "fragments", "pingpong", "moments"];
 const gridApps = apps.filter((app) => !dockApps.includes(app.id));
 
 /** Momentum projection from Apple's sample code (decelerationRate 0.99, snappier). */
@@ -25,6 +25,23 @@ export function Sheet({ id }: { id: AppId }) {
   const windowState = windows.windows.find((window) => window.id === id);
   const app = appById[id];
 
+  // Driven from here, not `animate`: with initial={false} motion would jump straight to y: 0.
+  useEffect(() => {
+    if (reducedMotion) return;
+    const controls = animate(y, 0, { type: "spring", bounce: 0, duration: 0.42 });
+    return () => controls.stop();
+  }, [reducedMotion, y]);
+
+  useEffect(() => {
+    sheetRef.current?.focus({ preventScroll: true });
+    const onKey = (event: KeyboardEvent) => {
+      // Popovers and in-app dialogs close themselves on Escape; don't take the sheet with them.
+      if (event.key === "Escape" && !document.querySelector(":popover-open, [data-modal]")) closeApp(id);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [closeApp, id]);
+
   return (
     <>
       <motion.div className="ios-scrim" style={{ opacity: scrim }} exit={{ opacity: 0, transition: { duration: 0.25 } }} onClick={() => closeApp(id)} />
@@ -33,9 +50,10 @@ export function Sheet({ id }: { id: AppId }) {
         className="ios-sheet"
         role="dialog"
         aria-label={app.name}
+        tabIndex={-1}
         style={{ y }}
         initial={reducedMotion ? { opacity: 0 } : false}
-        animate={reducedMotion ? { opacity: 1 } : { y: 0 }}
+        animate={reducedMotion ? { opacity: 1 } : undefined}
         exit={reducedMotion ? { opacity: 0 } : { y: offscreen, transition: { type: "spring", bounce: 0, duration: 0.3 } }}
         transition={{ type: "spring", bounce: 0, duration: 0.42 }}
       >
@@ -50,10 +68,13 @@ export function Sheet({ id }: { id: AppId }) {
             const height = sheet.offsetHeight;
             const target = event.currentTarget;
             target.setPointerCapture(event.pointerId);
-            const move = (moveEvent: PointerEvent) => y.set(Math.max(0, moveEvent.clientY - startY));
+            y.stop();
+            const grabbedAt = y.get();
+            const move = (moveEvent: PointerEvent) => y.set(Math.max(0, grabbedAt + moveEvent.clientY - startY));
             const up = (upEvent: PointerEvent) => {
               target.removeEventListener("pointermove", move);
               target.removeEventListener("pointerup", up);
+              target.removeEventListener("pointercancel", up);
               const elapsed = Math.max(16, performance.now() - startTime);
               const velocity = ((upEvent.clientY - startY) / elapsed) * 1000;
               // Decide from where the throw would land, not where the finger let go.
@@ -62,6 +83,7 @@ export function Sheet({ id }: { id: AppId }) {
             };
             target.addEventListener("pointermove", move);
             target.addEventListener("pointerup", up);
+            target.addEventListener("pointercancel", up);
           }}
         >
           <span className="ios-grabber" aria-hidden="true" />
@@ -103,7 +125,7 @@ export default function MobileHome() {
     <div className="ios">
       <div className="ios-status">
         <span>{clock?.time ?? ""}</span>
-        <span>{weather ? `上海 ${weather.temperature}° ${weather.label}` : "上海"}</span>
+        <span>{weather ? `北京 ${weather.temperature}° ${weather.label}` : "北京"}</span>
       </div>
       <div className="ios-home">
         <ProfileWidget />
@@ -111,7 +133,6 @@ export default function MobileHome() {
           <WeatherWidget />
           <OrbitWidget />
         </div>
-        <SongWidget />
         <div className="ios-grid">{gridApps.map((app) => icon(app.id))}</div>
       </div>
       <nav className="ios-dock" aria-label="程序坞">

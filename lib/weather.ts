@@ -1,6 +1,6 @@
 export type WeatherIcon = "sun" | "moon" | "partly" | "cloud" | "fog" | "drizzle" | "rain" | "snow" | "storm";
 
-export interface ShanghaiWeather {
+export interface BeijingWeather {
   temperature: number;
   code: number;
   isDay: boolean;
@@ -8,7 +8,7 @@ export interface ShanghaiWeather {
   icon: WeatherIcon;
 }
 
-export const SHANGHAI_COORDINATES = { latitude: 31.23, longitude: 121.47 } as const;
+export const BEIJING_COORDINATES = { latitude: 39.9, longitude: 116.41 } as const;
 
 /** WMO weather interpretation codes, as returned by Open-Meteo. */
 export function describeWeatherCode(code: number, isDay: boolean): { label: string; icon: WeatherIcon } {
@@ -24,7 +24,7 @@ export function describeWeatherCode(code: number, isDay: boolean): { label: stri
   return { label: "多云", icon: "cloud" };
 }
 
-export function parseOpenMeteo(data: unknown): ShanghaiWeather | null {
+export function parseOpenMeteo(data: unknown): BeijingWeather | null {
   if (!data || typeof data !== "object" || !("current" in data)) return null;
   const current = (data as { current: unknown }).current;
   if (!current || typeof current !== "object") return null;
@@ -37,7 +37,7 @@ export function parseOpenMeteo(data: unknown): ShanghaiWeather | null {
 
 const weatherIconNames = new Set<WeatherIcon>(["sun", "moon", "partly", "cloud", "fog", "drizzle", "rain", "snow", "storm"]);
 
-export function isShanghaiWeather(value: unknown): value is ShanghaiWeather {
+export function isBeijingWeather(value: unknown): value is BeijingWeather {
   if (!value || typeof value !== "object") return false;
   const weather = value as Record<string, unknown>;
   return (

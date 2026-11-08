@@ -33,7 +33,8 @@ export type WindowAction =
   | { type: "focus"; id: AppId }
   | { type: "minimize"; id: AppId; target?: Rect | null }
   | { type: "toggleMaximize"; id: AppId; area: Rect }
-  | { type: "commitRect"; id: AppId; rect: Rect; area: Rect };
+  | { type: "commitRect"; id: AppId; rect: Rect; area: Rect }
+  | { type: "reflow"; area: Rect };
 
 export const initialWindowState: WindowManagerState = { windows: [], order: [] };
 
@@ -63,16 +64,13 @@ export function defaultRect(id: AppId, area: Rect, stackIndex: number): Rect {
   const width = Math.min(size.width, area.width - 32);
   const height = Math.min(size.height, area.height - 24);
   const offset = (stackIndex % 6) * 28;
-  return clampRect(
-    {
-      width,
-      height,
-      x: area.x + (area.width - width) / 2 + offset - 70,
-      y: area.y + Math.max(12, (area.height - height) / 2 - 20) + offset,
-    },
-    area,
-  );
+  // Cascade, but never open past the work area and underneath the Dock.
+  const x = Math.min(area.x + (area.width - width) / 2 + offset - 70, area.x + area.width - width);
+  const y = Math.min(area.y + Math.max(12, (area.height - height) / 2 - 20) + offset, area.y + area.height - height);
+  return clampRect({ width, height, x, y }, area);
 }
+
+const sameRect = (a: Rect, b: Rect) => a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
 
 const bringToFront = (order: AppId[], id: AppId) => [...order.filter((item) => item !== id), id];
 
@@ -140,6 +138,14 @@ export function windowReducer(state: WindowManagerState, action: WindowAction): 
           window.id === action.id ? { ...window, rect: clampRect(action.rect, action.area), maximized: false, restoreRect: null } : window,
         ),
       };
+    case "reflow": {
+      // The viewport changed: maximized windows keep filling it, others stay reachable.
+      const windows = state.windows.map((window) => {
+        const rect = window.maximized ? { ...action.area } : clampRect(window.rect, action.area);
+        return sameRect(rect, window.rect) ? window : { ...window, rect };
+      });
+      return windows.every((window, index) => window === state.windows[index]) ? state : { ...state, windows };
+    }
     default:
       return state;
   }

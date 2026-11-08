@@ -64,14 +64,6 @@ export default function Window({ win, app, title, z, active, area, toolbar, onFo
     return () => controls.forEach((control) => control.stop());
   }, [win.rect, reducedMotion, x, y, width, height]);
 
-  // Keep windows reachable when the browser is resized.
-  useEffect(() => {
-    const clamped = clampRect(win.rect, area);
-    if (clamped.x !== win.rect.x || clamped.y !== win.rect.y || clamped.width !== win.rect.width || clamped.height !== win.rect.height) {
-      onCommit(clamped);
-    }
-  }, [area, win.rect, onCommit]);
-
   const currentRect = (): Rect => ({ x: x.get(), y: y.get(), width: width.get(), height: height.get() });
 
   const settleInside = () => {
@@ -83,7 +75,7 @@ export default function Window({ win, app, title, z, active, area, toolbar, onFo
   };
 
   const onTitlePointerDown = (event: ReactPointerEvent<HTMLElement>) => {
-    if (event.button !== 0 || (event.target as HTMLElement).closest("button, input, a, [data-no-drag]")) return;
+    if (event.button !== 0 || win.maximized || (event.target as HTMLElement).closest("button, input, a, [data-no-drag]")) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     interacting.current = true;
     // Respect where the title bar was grabbed.

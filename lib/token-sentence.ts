@@ -23,8 +23,8 @@ const slot = (id: string, candidates: [string, number][]): TokenSlot => ({
 export const heroSentence: SentencePart[] = [
   "我",
   "在",
-  "上海",
-  slot("doing", [["写代码", 0.42], ["踢球", 0.27], ["听歌", 0.19], ["发呆", 0.12]]),
+  "北京",
+  slot("doing", [["vibe coding", 0.42], ["踢球", 0.27], ["听歌", 0.19], ["发呆", 0.12]]),
   "，",
   "也",
   slot("also", [["做界面", 0.5], ["收集歌单", 0.3], ["打乒乓", 0.2]]),

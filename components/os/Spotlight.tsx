@@ -10,10 +10,11 @@ const index = buildSpotlightIndex();
 
 /** Opened from the keyboard many times a day, so it appears instantly — no animation. */
 export default function Spotlight() {
-  const { spotlightOpen, setSpotlightOpen, openApp, regenerate, playToday, lock } = useOS();
+  const { spotlightOpen, setSpotlightOpen, openApp, regenerate, lock } = useOS();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const results = useMemo(() => searchSpotlight(index, query), [query]);
 
   useEffect(() => {
@@ -33,10 +34,17 @@ export default function Spotlight() {
     // deferred effect from opening Spotlight.
     setQuery("");
     setSelected(0);
+    const previous = document.activeElement as HTMLElement | null;
     inputRef.current?.focus();
+    return () => previous?.focus?.({ preventScroll: true });
   }, [spotlightOpen]);
 
   useEffect(() => setSelected(0), [query]);
+
+  // Arrow keys can move past the visible part of the list.
+  useLayoutEffect(() => {
+    if (spotlightOpen) listRef.current?.children[selected]?.scrollIntoView({ block: "nearest" });
+  }, [selected, spotlightOpen]);
 
   if (!spotlightOpen) return null;
 
@@ -47,7 +55,6 @@ export default function Spotlight() {
     if (action.type === "app") openApp(action.id, { payload: action.payload, origin: null });
     else if (action.type === "link") window.open(action.href, "_blank", "noopener,noreferrer");
     else if (action.command === "regenerate") regenerate();
-    else if (action.command === "playToday") playToday(null);
     else if (action.command === "lock") lock();
   };
 
@@ -86,7 +93,7 @@ export default function Spotlight() {
           />
         </label>
         {results.length > 0 ? (
-          <ul className="spotlight-results" id="spotlight-results" role="listbox">
+          <ul ref={listRef} className="spotlight-results" id="spotlight-results" role="listbox">
             {results.map((item, position) => (
               <li
                 key={item.id}
@@ -109,6 +116,11 @@ export default function Spotlight() {
         ) : (
           <p className="spotlight-empty">没有找到「{query}」</p>
         )}
+        <div className="spotlight-keys" aria-hidden="true">
+          <span>↑↓ 选择</span>
+          <span>↵ 打开</span>
+          <span>Esc 关闭</span>
+        </div>
       </div>
     </div>
   );

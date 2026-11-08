@@ -2,15 +2,13 @@ import { expect, test, type Page } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
   // These are UI regressions; isolate them from music/weather provider availability.
-  await page.route("**/api/music/playlist?*", (route) => route.fulfill({ json: {
-    name: "测试歌单", trackCount: 1,
-    tracks: [{ id: "123", title: "测试歌曲", author: "测试歌手", pic: "https://example.com/cover.png", url: "https://example.com/audio.mp3" }],
-  } }));
   await page.route("**/api/weather", (route) => route.fulfill({ json: {
     temperature: 22, code: 3, isDay: true, label: "阴", icon: "cloud",
   } }));
-  await page.route("**/api/music/lyrics?*", (route) => route.fulfill({ json: { lyrics: "" } }));
-  await page.route("https://example.com/**", (route) => route.abort());
+  await page.route("**/api/moments", (route) => route.fulfill({ json: {
+    moments: [{ id: "11111111-1111-1111-1111-111111111111", text: "测试动态", location: "北京", images: [], likes: 2, createdAt: "2026-01-01T00:00:00.000Z" }],
+    owner: false, enabled: true, nextBefore: null,
+  } }));
 });
 
 async function enter(page: Page, path = "/") {
@@ -56,30 +54,28 @@ test("reopening the same Spotlight fragment restores its closed detail", async (
 for (const restored of [false, true]) {
   for (const [path, link, app] of [
     ["/football", "回到碎片", "碎片"],
-    ["/football", "回去听歌", "音乐"],
-    ["/moments", "回到碎片", "碎片"],
+    ["/football", "打一局乒乓球", "乒乓球"],
   ]) {
     test(`${path} ${link} opens ${app} (${restored ? "restored" : "fresh"} session)`, async ({ page }) => {
       if (restored) await page.addInitScript(() => sessionStorage.setItem("mateo-os-unlocked", "1"));
       await page.goto(path);
       await page.getByRole("link", { name: link, exact: true }).click();
-      await page.waitForURL((url) => url.pathname === "/" && url.hash === (app === "音乐" ? "#listen" : "#fragments"));
+      await page.waitForURL((url) => url.pathname === "/" && url.hash === (app === "乒乓球" ? "#pingpong" : "#fragments"));
       await expect(page.locator(`.os-window-frame[aria-label="${app}"]`)).toBeVisible();
-      if (app === "音乐") expect(await page.locator("audio").getAttribute("src")).toBeNull();
     });
   }
 }
 
 test("minimized windows cannot capture focus, and restore remains usable", async ({ page }) => {
   await enter(page);
-  const dock = page.getByRole("navigation", { name: "程序坞" });
-  await dock.getByRole("button", { name: "乒乓球", exact: true }).click();
+  const brand = page.getByRole("button", { name: "Mateo OS 菜单", exact: true });
+  await menuApp(page, "备忘录");
   const frame = page.locator('.os-window-frame[aria-label="备忘录"]');
   const search = frame.getByRole("textbox", { name: "搜索备忘录" });
   await search.fill("足球");
   await page.getByRole("button", { name: "最小化备忘录", exact: true }).focus();
   await page.keyboard.press("Enter");
-  await expect(dock.getByRole("button", { name: "乒乓球", exact: true })).toBeFocused();
+  await expect(brand).toBeFocused();
   for (let i = 0; i < 25; i++) {
     await page.keyboard.press("Tab");
     expect(await frame.evaluate((el) => el.contains(document.activeElement))).toBe(false);
@@ -96,9 +92,8 @@ test("mobile deep links open the destination and follow subsequent hash navigati
   await page.setViewportSize({ width: 390, height: 844 });
   await enter(page, "/#fragments");
   await expect(page.getByRole("dialog", { name: "碎片", exact: true })).toBeVisible();
-  await page.evaluate(() => { location.hash = "listen"; });
-  await expect(page.getByRole("dialog", { name: "音乐", exact: true })).toBeVisible();
-  expect(await page.locator("audio").getAttribute("src")).toBeNull();
+  await page.evaluate(() => { location.hash = "pingpong"; });
+  await expect(page.getByRole("dialog", { name: "乒乓球", exact: true })).toBeVisible();
 });
 
 test("a consumed deep link is not reopened on resize", async ({ page }) => {
@@ -107,7 +102,7 @@ test("a consumed deep link is not reopened on resize", async ({ page }) => {
   await expect(page.locator(".fragments-app")).toHaveCount(0);
   await page.setViewportSize({ width: 1100, height: 800 });
   await page.getByRole("navigation", { name: "程序坞" }).getByRole("button", { name: "乒乓球", exact: true }).click();
-  await expect(page.locator(".notes-app")).toBeVisible();
+  await expect(page.locator(".pingpong-app")).toBeVisible();
   await expect(page.locator(".fragments-app")).toHaveCount(0);
 });
 
@@ -157,14 +152,13 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 800, height: 700
 
 test("the spatial home connects each scene and keeps overview navigation reversible", async ({ page }) => {
   await enter(page);
-  await expect(page.getByRole("heading", { name: /在上海写代码、\s*打乒乓球、\s*听歌。/ })).toBeVisible();
-  await expect(page.locator(".space-scene-art img")).toHaveCount(4);
-  expect(await page.locator("audio").count()).toBe(0);
+  await expect(page.getByRole("heading", { name: /在北京 vibe coding、\s*打乒乓球、\s*听歌。/ })).toBeVisible();
+  await expect(page.locator(".space-scene-art img")).toHaveCount(3);
   const dock = page.getByRole("navigation", { name: "程序坞" });
   for (const [title, selector, text] of [
     ["作品", ".projects-app h1", "把想法做成作品。"],
-    ["乒乓球", ".notes-document h1", "乒乓"],
-    ["生活", ".fragments-app", "20 个碎片"],
+    ["乒乓球", ".pingpong-app", "打一局"],
+    ["生活", ".moments-app", "测试动态"],
   ]) {
     await dock.getByRole("button", { name: title, exact: true }).click();
     await expect(page.locator(selector)).toContainText(text);
@@ -185,19 +179,42 @@ test("the spatial home connects each scene and keeps overview navigation reversi
   await expect(page.getByRole("button", { name: "重置画布", exact: true })).toHaveText("100%");
 });
 
+test("the Dock stays reachable above tall windows and toggles the front app", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 640 });
+  await enter(page);
+  await menuApp(page, "此刻");
+  const dock = page.getByRole("navigation", { name: "程序坞" });
+  const work = dock.getByRole("button", { name: "作品", exact: true });
+  await work.click();
+  await expect(page.locator(".projects-app")).toBeVisible();
+  await work.click();
+  await expect(page.locator('.os-window-frame[aria-label="作品"]')).toHaveClass(/is-minimized/);
+});
+
+test("Spotlight keeps the keyboard selection in view", async ({ page }) => {
+  await enter(page);
+  await page.keyboard.press("Control+k");
+  for (let i = 0; i < 14; i++) await page.keyboard.press("ArrowDown");
+  const inView = await page.locator('.spotlight-results li[aria-selected="true"]').evaluate((item) => {
+    const list = item.parentElement!.getBoundingClientRect(), rect = item.getBoundingClientRect();
+    return rect.top >= list.top && rect.bottom <= list.bottom;
+  });
+  expect(inView).toBe(true);
+});
+
 test("a locked session resumes a pending deep link on unlock", async ({ page }) => {
   await enter(page);
   await menuApp(page, "锁定屏幕");
-  await page.evaluate(() => { location.hash = "listen"; });
-  await expect(page.locator(".music-app")).toHaveCount(0);
+  await page.evaluate(() => { location.hash = "pingpong"; });
+  await expect(page.locator(".pingpong-app")).toHaveCount(0);
   await page.getByRole("button", { name: "进入", exact: true }).click();
-  await expect(page.locator(".music-app")).toBeVisible();
+  await expect(page.locator(".pingpong-app")).toBeVisible();
 });
 
 test("the mobile home scrolls through all scenes without horizontal overflow", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await enter(page);
-  for (const scene of ["代码与产品", "乒乓球", "音乐", "生活碎片"]) {
+  for (const scene of ["Vibe Coding", "乒乓球", "生活碎片"]) {
     const art = page.getByRole("button", { name: `进入${scene}`, exact: true });
     await art.scrollIntoViewIfNeeded();
     await expect(art).toBeInViewport();
@@ -205,31 +222,65 @@ test("the mobile home scrolls through all scenes without horizontal overflow", a
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(await page.locator(".space-intro").evaluate((el) => el.getBoundingClientRect().bottom < 0)).toBe(true);
   await page.getByRole("button", { name: "进入生活碎片", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "碎片", exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "朋友圈", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "完成", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "碎片", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "朋友圈", exact: true })).toHaveCount(0);
 });
 
-test("the mini player controls the actual audio while its window is minimized", async ({ page }) => {
-  // A valid local WAV gives the real media element deterministic playback.
-  const samples = 8000 * 12;
-  const wav = Buffer.alloc(44 + samples * 2);
-  wav.write("RIFF", 0); wav.writeUInt32LE(wav.length - 8, 4); wav.write("WAVEfmt ", 8);
-  wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
-  wav.writeUInt32LE(8000, 24); wav.writeUInt32LE(16000, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34);
-  wav.write("data", 36); wav.writeUInt32LE(samples * 2, 40);
-  await page.route("https://example.com/audio.mp3", (route) => route.fulfill({ body: wav, contentType: "audio/wav" }));
-  await enter(page);
-  await page.getByRole("button", { name: "播放音乐", exact: true }).click();
-  await expect.poll(() => page.locator("audio").evaluate((audio: HTMLAudioElement) => !audio.paused && audio.currentTime > 0)).toBe(true);
-  await page.getByRole("button", { name: "最小化音乐", exact: true }).click();
-  await page.getByRole("button", { name: "暂停音乐", exact: true }).click();
-  await expect.poll(() => page.locator("audio").evaluate((audio: HTMLAudioElement) => audio.paused)).toBe(true);
-  await page.getByRole("button", { name: "播放音乐", exact: true }).click();
-  await expect.poll(() => page.locator("audio").evaluate((audio: HTMLAudioElement) => !audio.paused)).toBe(true);
-  await page.getByRole("navigation", { name: "程序坞" }).getByRole("button", { name: "音乐", exact: true }).click();
-  await page.getByRole("button", { name: "关闭音乐", exact: true }).click();
-  await expect(page.locator("audio")).toHaveCount(0);
-  await page.getByRole("navigation", { name: "程序坞" }).getByRole("button", { name: "音乐", exact: true }).click();
-  await expect.poll(() => page.locator("audio").evaluate((audio: HTMLAudioElement) => audio.paused && !audio.getAttribute("src"))).toBe(true);
+test("the old moments page redirects into the feed", async ({ page }) => {
+  await page.goto("/moments");
+  await expect(page.locator(".moments-app")).toContainText("测试动态");
+});
+
+test("visitors can like but not post; ping pong serves and shows both tabs", async ({ page }) => {
+  await page.route("**/api/moments/*/like", (route) => route.fulfill({ json: { likes: 3 } }));
+  await enter(page, "/#moments");
+  await expect(page.getByRole("button", { name: "发表动态" })).toHaveCount(0);
+  const like = page.getByRole("button", { name: /点赞/ });
+  await like.click();
+  await expect(like).toHaveAttribute("aria-pressed", "true");
+  await expect(like).toContainText("3");
+
+  await page.getByRole("navigation", { name: "程序坞" }).getByRole("button", { name: "乒乓球", exact: true }).click();
+  const status = page.locator(".pp-status");
+  await expect(status).toHaveText("点击球台发球");
+  await page.locator(".pp-canvas").click();
+  await expect(status).not.toHaveText("点击球台发球");
+  await page.getByRole("button", { name: "我的球", exact: true }).click();
+  await expect(page.locator(".pp-empty")).toContainText("打球的片段还在整理");
+  await page.getByRole("button", { name: "去打一局", exact: true }).click();
+  await expect(page.locator(".pp-canvas")).toBeVisible();
+});
+
+test("the owner sees the composer once signed in", async ({ page }) => {
+  await page.route("**/api/moments", (route) => route.fulfill({ json: { moments: [], owner: true, enabled: true, nextBefore: null } }));
+  await enter(page, "/#moments");
+  await page.getByRole("button", { name: "发表动态" }).click();
+  await page.getByRole("textbox", { name: "这一刻的想法" }).fill("你好");
+  await expect(page.getByRole("button", { name: "发表", exact: true })).toBeEnabled();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "发表动态" })).toHaveCount(0);
+  await expect(page.locator(".moments-app")).toBeVisible();
+});
+
+test("visitors play as Mateo, finish the day and can fly to Eshan", async ({ page }) => {
+  await page.goto("/world?skip=1");
+  await expect(page.locator('.world[data-loaded="true"]')).toBeVisible();
+  await page.getByRole("button", { name: "去乒乓球场（乒乓球）" }).click();
+  await expect(page.locator(".world-prompt")).toContainText("乒乓球场");
+  await page.keyboard.press("Space");
+  await expect(page.locator(".pingpong-app")).toBeVisible();
+  await expect(page.locator(".world-todos li.is-done")).toContainText("打一局球");
+  await page.getByRole("button", { name: "关闭乒乓球", exact: true }).click();
+  await page.getByRole("button", { name: "去小机场（我从哪来）" }).click();
+  await page.keyboard.press("Space");
+  await expect(page.locator(".world-badge")).toContainText("峨山");
+  await expect(page.locator(".world-talk")).toContainText("我长大的地方");
+});
+
+test("the opening card asks the visitor to be Mateo", async ({ page }) => {
+  await page.goto("/world");
+  await expect(page.locator(".world-card")).toContainText("今天换你来当我");
+  await page.getByRole("button", { name: "开始这一天", exact: true }).click();
+  await expect(page.locator(".world-card")).toHaveCount(0);
 });

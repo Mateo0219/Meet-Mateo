@@ -227,34 +227,6 @@ button.menubar-status:hover {
   font-variant-numeric: tabular-nums;
 }
 
-.now-playing {
-  max-width: 220px;
-}
-
-.now-playing-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.mini-eq {
-  height: 11px;
-  display: inline-flex;
-  align-items: flex-end;
-  gap: 1.5px;
-}
-
-.mini-eq i {
-  width: 2px;
-  height: 100%;
-  border-radius: 1px;
-  background: currentColor;
-  transform-origin: bottom;
-  animation: player-eq 800ms ease-in-out infinite alternate;
-}
-
-.mini-eq i:nth-child(2) { animation-delay: -250ms; animation-duration: 650ms; }
-.mini-eq i:nth-child(3) { animation-delay: -500ms; animation-duration: 950ms; }
-
 /* ==========================================================================
    Desktop: widgets, files, avatar
    ========================================================================== */
@@ -392,80 +364,7 @@ button.menubar-status:hover {
   opacity: 0.78;
 }
 
-.widget-song {
-  display: grid;
-  grid-template-columns: 72px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 14px;
-}
-
-.widget-disc {
-  position: relative;
-  width: 72px;
-  height: 72px;
-  overflow: hidden;
-  border-radius: 50%;
-  background: var(--ink);
-  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 18%, transparent);
-}
-
-.widget-disc img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.widget-disc::after {
-  content: "";
-  position: absolute;
-  inset: 40%;
-  border-radius: 50%;
-  background: var(--cream);
-}
-
-.widget-song-copy {
-  min-width: 0;
-  display: grid;
-  gap: 3px;
-}
-
-.widget-song-copy strong {
-  overflow: hidden;
-  font-size: 19px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.widget-song-copy .widget-caption {
-  overflow: hidden;
-  margin: 0;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.widget-play {
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.84);
-  color: #FFF6E9;
-}
-
-.widget-play svg {
-  margin-left: 2px;
-}
-
-.widget-play:disabled {
-  opacity: 0.4;
-}
-
-.widget-action:active,
-.widget-play:active:not(:disabled) {
+.widget-action:active {
   scale: 0.95;
 }
 
@@ -818,11 +717,19 @@ button.menubar-status:hover {
   opacity: 0;
 }
 
+.light::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+}
+
 .light-close::before { content: "×"; font-size: 12px; }
 .light-minimize::before { content: "−"; }
 .light-zoom::before { content: "+"; }
 
-.traffic-lights:hover .light::before {
+.traffic-lights:hover .light::before,
+.traffic-lights:has(:focus-visible) .light::before {
   opacity: 1;
 }
 
@@ -906,6 +813,7 @@ button.menubar-status:hover {
   position: fixed;
   z-index: 900;
   inset: 0;
+  background: rgba(44, 36, 28, 0.16);
 }
 
 .spotlight {
@@ -1000,8 +908,25 @@ button.menubar-status:hover {
   white-space: nowrap;
 }
 
+.spotlight-results li.is-selected .spotlight-swatch {
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.8);
+}
+
 .spotlight-results li.is-selected small {
   color: rgba(255, 255, 255, 0.78);
+}
+
+.spotlight-keys {
+  padding: 8px 18px;
+  display: flex;
+  gap: 16px;
+  border-top: 1px solid var(--os-line);
+  color: var(--os-text-3);
+  font-size: 12px;
+}
+
+@media (hover: none) {
+  .spotlight-keys { display: none; }
 }
 
 .spotlight-empty {
@@ -1118,7 +1043,7 @@ button.menubar-status:hover {
 }
 
 .now-app.is-night {
-  background: #110E1B;
+  background: #171A29;
 }
 
 .poster-grid {
@@ -1128,7 +1053,6 @@ button.menubar-status:hover {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-areas:
     "title title"
-    "song song"
     "orbit weather";
   grid-auto-rows: auto;
   gap: 8px;
@@ -1141,28 +1065,27 @@ button.menubar-status:hover {
 
   .poster-grid[data-layout="split"] {
     grid-template-areas:
-      "title title song song"
-      "title title orbit weather";
+      "title title title orbit"
+      "title title title weather";
     grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
   }
 
   .poster-grid[data-layout="banner"] {
     grid-template-areas:
       "title title title title"
-      "song song orbit weather";
+      "orbit orbit weather weather";
     grid-template-rows: minmax(0, 1.4fr) minmax(0, 1fr);
   }
 
   .poster-grid[data-layout="column"] {
     grid-template-areas:
-      "song title title title"
-      "song orbit weather weather";
-    grid-template-rows: minmax(0, 1.4fr) minmax(0, 1fr);
+      "orbit title title title"
+      "weather title title title";
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
   }
 }
 
 .block-title { grid-area: title; }
-.block-song { grid-area: song; }
 .block-orbit { grid-area: orbit; }
 .block-weather { grid-area: weather; }
 
@@ -1241,7 +1164,7 @@ button.menubar-status:hover {
   font-size: clamp(15px, 3.4cqi, 21px);
   font-weight: 700;
   white-space: nowrap;
-  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
 .token-punct {
@@ -1290,7 +1213,7 @@ button.menubar-status:hover {
   border-radius: 14px;
   background: var(--cream);
   color: var(--ink);
-  box-shadow: 0 0 0 1.5px var(--ink), 0 20px 44px -16px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 0 0 1px rgba(60, 45, 30, 0.1), 0 20px 44px -16px rgba(60, 45, 30, 0.4);
   transform-origin: top left;
 }
 
@@ -1422,101 +1345,6 @@ button.menubar-status:hover {
   font-variant-numeric: tabular-nums;
 }
 
-.song-disc {
-  position: relative;
-  width: clamp(96px, 36cqi, 200px);
-  aspect-ratio: 1;
-  margin: auto 0;
-  overflow: hidden;
-  border-radius: 50%;
-  background: var(--ink);
-  box-shadow: 0 0 0 5px color-mix(in srgb, currentColor 16%, transparent), 0 16px 30px -14px rgba(0, 0, 0, 0.5);
-}
-
-.song-disc img,
-.song-disc-empty {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-}
-
-.song-disc::after {
-  content: "";
-  position: absolute;
-  inset: 41%;
-  border-radius: 50%;
-  background: var(--cream);
-  box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 0.2);
-}
-
-.song-copy strong {
-  display: -webkit-box;
-  overflow: hidden;
-  font-size: clamp(1.3rem, 7cqi, 2.2rem);
-  font-weight: 800;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.song-copy span {
-  display: block;
-  margin-top: 6px;
-  font-size: 13.5px;
-  font-weight: 600;
-  opacity: 0.75;
-}
-
-.block-action {
-  align-self: flex-start;
-  justify-self: start;
-  height: 38px;
-  padding: 0 16px;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--ink);
-  color: var(--cream);
-  font-size: 13.5px;
-  font-weight: 700;
-}
-
-.block-action:active:not(:disabled) {
-  scale: 0.95;
-}
-
-.block-action:disabled {
-  opacity: 0.4;
-}
-
-@container (min-width: 420px) {
-  .block-song {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: auto 1fr auto;
-    column-gap: 22px;
-  }
-
-  .block-song .block-label {
-    grid-column: 1 / -1;
-  }
-
-  .block-song .song-disc {
-    grid-row: 2 / 4;
-    align-self: end;
-    width: clamp(96px, 26cqi, 180px);
-    margin: 0;
-  }
-
-  .block-song .song-copy {
-    align-self: end;
-  }
-}
-
 .orbit-ring,
 .weather-glyph {
   position: absolute;
@@ -1579,10 +1407,10 @@ button.menubar-status:hover {
   justify-content: space-between;
   gap: 16px;
   border-radius: 999px;
-  background: var(--ink);
-  color: var(--yellow);
-  font-family: var(--font-mono);
-  font-size: 12px;
+  background: #FFFDFA;
+  box-shadow: inset 0 0 0 1px var(--os-line);
+  color: var(--os-text-2);
+  font-size: 12.5px;
 }
 
 .strip-status {
@@ -1599,11 +1427,11 @@ button.menubar-status:hover {
   gap: 7px;
   border: 0;
   border-radius: 999px;
-  background: var(--yellow);
-  color: var(--yellow-ink);
+  background: var(--os-select);
+  color: #FFFFFF;
   font-family: var(--font-sans);
   font-size: 13.5px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .poster-strip button svg {
@@ -1619,13 +1447,14 @@ button.menubar-status:hover {
 }
 
 .now-app.is-night .poster-strip {
-  background: var(--yellow);
-  color: var(--yellow-ink);
+  background: #252B42;
+  box-shadow: none;
+  color: rgba(251, 247, 241, 0.72);
 }
 
 .now-app.is-night .poster-strip button {
-  background: var(--ink);
-  color: var(--yellow);
+  background: var(--os-select);
+  color: #FFFFFF;
 }
 
 /* ==========================================================================
@@ -1637,8 +1466,8 @@ button.menubar-status:hover {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--ink);
-  color: var(--cream);
+  background: var(--os-window);
+  color: var(--os-text);
 }
 
 .fragments-toolbar {
@@ -1651,7 +1480,7 @@ button.menubar-status:hover {
 }
 
 .fragments-count {
-  color: var(--on-ink-faint);
+  color: var(--os-text-2);
   font-size: 12.5px;
 }
 
@@ -1661,7 +1490,7 @@ button.menubar-status:hover {
   display: inline-flex;
   gap: 2px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(50, 38, 30, 0.07);
 }
 
 .lens-switch button {
@@ -1672,18 +1501,18 @@ button.menubar-status:hover {
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--on-ink-muted);
+  color: var(--os-text-2);
   font-size: 13.5px;
-  font-weight: 700;
+  font-weight: 600;
   transition: color 200ms ease;
 }
 
 .lens-switch button:hover {
-  color: var(--cream);
+  color: var(--os-text);
 }
 
 .lens-switch button.is-active {
-  color: var(--lime-ink);
+  color: #FFFFFF;
 }
 
 .lens-indicator {
@@ -1691,7 +1520,7 @@ button.menubar-status:hover {
   z-index: -1;
   inset: 0;
   border-radius: inherit;
-  background: var(--lime);
+  background: var(--os-select);
 }
 
 .fragment-canvas {
@@ -1701,10 +1530,11 @@ button.menubar-status:hover {
   margin: 0 10px;
   overflow: hidden;
   overflow: clip;
-  border-radius: 18px;
-  background-color: #1F1A2D;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.09) 1.2px, transparent 1.6px);
+  border-radius: 16px;
+  background-color: #F1ECE5;
+  background-image: radial-gradient(rgba(60, 45, 30, 0.14) 1.1px, transparent 1.5px);
   background-size: 26px 26px;
+  box-shadow: inset 0 0 0 1px rgba(60, 45, 30, 0.06);
 }
 
 .sticker {
@@ -1724,7 +1554,7 @@ button.menubar-status:hover {
   line-height: 42px;
   text-overflow: ellipsis;
   white-space: nowrap;
-  box-shadow: 0 0 0 3px var(--cream), 0 14px 26px -14px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 12px 22px -14px rgba(60, 45, 30, 0.5);
   transition: opacity 300ms ease, filter 300ms ease;
 }
 
@@ -1761,7 +1591,7 @@ button.menubar-status:hover {
 
 .sticker.is-active {
   z-index: 30;
-  box-shadow: 0 0 0 3px var(--cream), 0 0 0 7px var(--lime), 0 18px 32px -14px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 4px var(--os-select), 0 16px 28px -14px rgba(60, 45, 30, 0.5);
 }
 
 .sticker.is-dimmed {
@@ -1799,7 +1629,7 @@ button.menubar-status:hover {
 }
 
 .group-label small {
-  color: var(--on-ink-faint);
+  color: var(--os-text-3);
   font-family: var(--font-mono);
   font-size: 12px;
 }
@@ -1814,10 +1644,10 @@ button.menubar-status:hover {
 }
 
 .neighbor-lines line {
-  stroke: var(--cream);
-  stroke-width: 2;
+  stroke: var(--os-select);
+  stroke-width: 1.5;
   stroke-linecap: round;
-  opacity: 0.7;
+  opacity: 0.55;
 }
 
 .fragment-detail {
@@ -1827,10 +1657,10 @@ button.menubar-status:hover {
   bottom: 14px;
   width: min(340px, calc(100% - 28px));
   padding: 16px 18px 18px;
-  border-radius: 20px;
-  background: var(--cream);
-  color: var(--ink);
-  box-shadow: 0 28px 56px -24px rgba(0, 0, 0, 0.85);
+  border-radius: 18px;
+  background: #FFFDFA;
+  color: var(--os-text);
+  box-shadow: 0 0 0 1px rgba(60, 45, 30, 0.06), 0 24px 48px -22px rgba(60, 45, 30, 0.45);
 }
 
 .fragment-detail-top {
@@ -1903,7 +1733,8 @@ button.menubar-status:hover {
 }
 
 .detail-near button:hover {
-  background: var(--lime);
+  background: #E4E9FF;
+  color: #2438A8;
 }
 
 .detail-action {
@@ -1927,9 +1758,8 @@ button.menubar-status:hover {
   display: flex;
   justify-content: space-between;
   gap: 24px;
-  color: var(--on-ink-faint);
-  font-family: var(--font-mono);
-  font-size: 11.5px;
+  color: var(--os-text-2);
+  font-size: 12px;
   line-height: 1.6;
 }
 
@@ -1940,41 +1770,6 @@ button.menubar-status:hover {
 
 .canvas-caption span {
   flex: none;
-}
-
-/* ==========================================================================
-   App: 音乐 — the player fills its window and adapts to the window's width
-   ========================================================================== */
-
-.music-app {
-  min-height: 100%;
-  background: var(--ink);
-}
-
-.music-app .music-player {
-  min-height: 100%;
-  border-radius: 0;
-  container-type: inline-size;
-}
-
-@container (max-width: 760px) {
-  .player-grid {
-    grid-template-columns: 1fr;
-    padding: 20px 4px 12px;
-    gap: 24px;
-  }
-
-  .cover-interaction {
-    width: min(64cqi, 340px);
-  }
-
-  .track-heading h3 {
-    font-size: clamp(2rem, 9cqi, 3.2rem);
-  }
-
-  .player-counter {
-    display: none;
-  }
 }
 
 /* ==========================================================================
@@ -2044,8 +1839,8 @@ button.menubar-status:hover {
 }
 
 .notes-list button.is-selected {
-  background: var(--yellow);
-  color: var(--yellow-ink);
+  background: #E4E9FF;
+  color: #2438A8;
 }
 
 .notes-list strong {
@@ -2104,7 +1899,7 @@ button.menubar-status:hover {
   max-width: 620px;
   margin: 18px 0;
   padding: 4px 0 4px 16px;
-  border-left: 3px solid var(--pink);
+  border-left: 3px solid var(--os-select);
   font-size: 17px;
   font-weight: 700;
   line-height: 1.6;
@@ -2189,8 +1984,8 @@ button.menubar-status:hover {
 .terminal-app {
   height: 100%;
   min-height: 100%;
-  background: #15121F;
-  color: #EDE6F7;
+  background: #1A1E2E;
+  color: #EEEAE3;
   font-family: var(--font-mono);
   font-size: 13.5px;
   cursor: text;
@@ -2550,8 +2345,7 @@ button.menubar-status:hover {
    ========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
-  .token-caret,
-  .mini-eq i {
+  .token-caret {
     animation: none !important;
   }
 

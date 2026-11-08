@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { parseOpenMeteo, SHANGHAI_COORDINATES } from "@/lib/weather";
+import { parseOpenMeteo, BEIJING_COORDINATES } from "@/lib/weather";
 
 const MAX_WEATHER_BYTES = 16_000;
 
@@ -8,8 +8,8 @@ export async function GET() {
   try {
     const url = new URL("https://api.open-meteo.com/v1/forecast");
     url.search = new URLSearchParams({
-      latitude: String(SHANGHAI_COORDINATES.latitude),
-      longitude: String(SHANGHAI_COORDINATES.longitude),
+      latitude: String(BEIJING_COORDINATES.latitude),
+      longitude: String(BEIJING_COORDINATES.longitude),
       current: "temperature_2m,weather_code,is_day",
       timezone: "Asia/Shanghai",
     }).toString();

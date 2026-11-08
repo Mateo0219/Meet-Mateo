@@ -30,13 +30,11 @@ export interface Fragment {
   opens?: { app: AppId; payload?: string };
   action?: string;
   /** Labels filled in from live data at render time. */
-  live?: "playlist" | "song" | "birthday";
+  live?: "birthday";
 }
 
 export const fragments: Fragment[] = [
-  { id: "playlist", kind: "music", label: "喜欢的音乐", detail: "网易云里一直在加的歌单，这个网站的播放器就从这里读歌。", shape: "round", tags: { 音乐: 1, 情绪: 0.6 }, opens: { app: "music" }, action: "去听", live: "playlist" },
-  { id: "today-song", kind: "music", label: "今天抽到的歌", detail: "首页海报每次生成时，从歌单里抽一首。", shape: "pill", tags: { 音乐: 1, 情绪: 0.8, 好奇: 0.2 }, opens: { app: "music" }, action: "去听", live: "song" },
-  { id: "rhythm-focus", kind: "music", label: "用节奏调节注意力", detail: "写代码的时候，歌的节奏决定了我能专注多久。", shape: "pill", tags: { 音乐: 1, 节奏: 0.8, 专注: 0.7, 创造: 0.25 } },
+  { id: "rhythm-focus", kind: "music", label: "用节奏调节注意力", detail: "vibe coding 的时候，歌的节奏决定了我能专注多久。", shape: "pill", tags: { 音乐: 1, 节奏: 0.8, 专注: 0.7, 创造: 0.25 } },
   { id: "mood-archive", kind: "music", label: "保存每段时间的情绪", detail: "回头听某首歌，会想起当时在做什么、在想什么。", shape: "card", tags: { 音乐: 0.9, 情绪: 1 } },
 
   { id: "midfield", kind: "sport", label: "中场", detail: "我在场上的位置。要看全局，也要接得住球。", shape: "round", tags: { 运动: 1, 空间: 0.8, 团队: 0.7 }, opens: { app: "notes", payload: "football" }, action: "读足球笔记" },
@@ -52,11 +50,11 @@ export const fragments: Fragment[] = [
   { id: "not-final", kind: "make", label: "第一版不是结论", detail: "像判断下一次跑位一样，让东西持续接近它该有的样子。", shape: "pill", tags: { 创造: 0.7, 迭代: 1, 判断: 0.4, 运动: 0.15 } },
   { id: "feel-first", kind: "make", label: "先感受，再定义", detail: "音乐、球场、街道与日常都是输入。先把注意力放进去，答案才开始成形。", shape: "card", tags: { 创造: 0.5, 情绪: 0.6, 判断: 0.7, 好奇: 0.4 } },
 
-  { id: "shanghai", kind: "life", label: "上海", detail: "现在生活的城市。首页的时间和天气都来自这里。", shape: "round", tags: { 生活: 1, 空间: 0.4 } },
+  { id: "beijing", kind: "life", label: "北京", detail: "现在生活的城市。首页的时间和天气都来自这里。", shape: "round", tags: { 生活: 1, 空间: 0.4 } },
   { id: "birthday", kind: "life", label: "生日轨道", detail: "离下一次生日还有多久，每一次绕行都算数。", shape: "pill", tags: { 生活: 1, 节奏: 0.4 }, live: "birthday" },
   { id: "slow", kind: "life", label: "慢慢来", detail: "不赶时间。", shape: "pill", tags: { 生活: 0.8, 节奏: 0.6 } },
   { id: "curious", kind: "life", label: "保持好奇", detail: "永远保留一个没有被答案填满的位置。", shape: "round", tags: { 好奇: 1, 生活: 0.5, 创造: 0.3 } },
-  { id: "archive", kind: "life", label: "记录 · 暂时是空的", detail: "等遇到想留下来的照片和文字，再从这里开始更新。", shape: "pill", tags: { 生活: 0.8, 情绪: 0.25, 好奇: 0.3 }, opens: { app: "notes", payload: "moments" }, action: "打开记录" },
+  { id: "archive", kind: "life", label: "朋友圈", detail: "想留下来的照片和文字，都发在这里。", shape: "pill", tags: { 生活: 0.8, 情绪: 0.25, 好奇: 0.3 }, opens: { app: "moments" }, action: "打开朋友圈" },
 ];
 
 function toVector(fragment: Fragment): number[] {

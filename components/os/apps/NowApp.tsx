@@ -1,7 +1,5 @@
 "use client";
 
-import Image from "next/image";
-import { useRef } from "react";
 import {
   Cloud,
   CloudDrizzle,
@@ -11,7 +9,6 @@ import {
   CloudSnow,
   CloudSun,
   Moon,
-  Play,
   RefreshCw,
   Sun,
   type LucideIcon,
@@ -19,7 +16,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { swatches } from "@/lib/poster";
 import type { WeatherIcon } from "@/lib/weather";
-import { rectOf, useOS } from "../OSProvider";
+import { useOS } from "../OSProvider";
 import TokenSentence from "./TokenSentence";
 
 const weatherIcons: Record<WeatherIcon, LucideIcon> = {
@@ -50,12 +47,11 @@ const RING_RADIUS = 44;
 const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
 
 export default function NowApp() {
-  const { clock, weather, todaySong, birthday, composition, choice, temperature, setTemperature, swapToken, regenerate, playToday, isNight } = useOS();
-  const songRef = useRef<HTMLElement>(null);
+  const { clock, weather, birthday, composition, choice, temperature, setTemperature, swapToken, regenerate, isNight } = useOS();
   const { colors, chipColors, layout, seed } = composition;
   const paint = (block: keyof typeof colors) => ({ backgroundColor: swatches[colors[block]].bg, color: swatches[colors[block]].ink });
   const WeatherGlyph = weather ? weatherIcons[weather.icon] : Cloud;
-  const signalCount = [clock, weather, todaySong, birthday].filter(Boolean).length + 1;
+  const signalCount = [clock, weather, birthday].filter(Boolean).length + 1;
 
   return (
     <div className={`now-app${isNight ? " is-night" : ""}`}>
@@ -63,7 +59,7 @@ export default function NowApp() {
         <motion.div key={seed} className="poster-grid" data-layout={layout} variants={gridVariants} initial="hidden" animate="visible" exit="exit">
           <motion.article className="poster-block block-title" style={paint("title")} variants={blockVariants}>
             <div className="block-meta">
-              <span>上海 · {clock?.time ?? "--:--"}</span>
+              <span>北京 · {clock?.time ?? "--:--"}</span>
               <span>{clock ? `${clock.weekday} ${clock.date}` : ""}</span>
             </div>
             <h2 className="poster-title">
@@ -84,20 +80,6 @@ export default function NowApp() {
               />
               <output>{temperature.toFixed(1)}</output>
             </label>
-          </motion.article>
-
-          <motion.article ref={songRef} className="poster-block block-song" style={paint("song")} variants={blockVariants}>
-            <span className="block-label">今天抽到</span>
-            <div className="song-disc" aria-hidden="true">
-              {todaySong ? <Image src={todaySong.cover} alt="" width={240} height={240} unoptimized /> : <span className="song-disc-empty" />}
-            </div>
-            <div className="song-copy">
-              <strong>{todaySong?.name ?? "正在抽歌…"}</strong>
-              <span>{todaySong?.artist ?? "Mateo_0219 喜欢的音乐"}</span>
-            </div>
-            <button type="button" className="block-action" onClick={() => playToday(rectOf(songRef.current))} disabled={!todaySong}>
-              <Play size={15} fill="currentColor" aria-hidden="true" /> 播放
-            </button>
           </motion.article>
 
           <motion.article className="poster-block block-orbit" style={paint("orbit")} variants={blockVariants}>
@@ -121,7 +103,7 @@ export default function NowApp() {
           </motion.article>
 
           <motion.article className="poster-block block-weather" style={paint("weather")} variants={blockVariants}>
-            <span className="block-label">上海天气</span>
+            <span className="block-label">北京天气</span>
             <WeatherGlyph className="weather-glyph" size={44} strokeWidth={1.6} aria-hidden="true" />
             <div className="block-figure">
               <strong>{weather ? `${weather.temperature}°` : "--°"}</strong>

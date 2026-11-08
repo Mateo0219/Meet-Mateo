@@ -35,7 +35,7 @@ export default function LockScreen() {
       <div className="lock-clock">
         <span>{clock ? `${month}月${day}日 ${clock.weekday}` : " "}</span>
         <strong>{clock?.time ?? " "}</strong>
-        <small>{clock ? `上海 · ${clock.moment}` : " "}</small>
+        <small>{clock ? `北京 · ${clock.moment}` : " "}</small>
       </div>
       <div className="lock-user">
         <img src={AVATAR_SRC} alt="" className="lock-avatar" width={96} height={112} />

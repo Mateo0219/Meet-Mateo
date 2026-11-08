@@ -1,8 +1,8 @@
 import type { SwatchName } from "./poster";
 
-export type AppId = "now" | "fragments" | "music" | "notes" | "terminal" | "llms" | "about" | "projects";
+export type AppId = "now" | "fragments" | "notes" | "terminal" | "llms" | "about" | "projects" | "pingpong" | "moments";
 
-export type AppIconName = "sparkles" | "shapes" | "music" | "notes" | "terminal" | "file" | "user";
+export type AppIconName = "sparkles" | "shapes" | "pingpong" | "moments" | "notes" | "terminal" | "file" | "user";
 
 export interface AppMeta {
   id: AppId;
@@ -18,9 +18,9 @@ export interface AppMeta {
 
 export const apps: AppMeta[] = [
   {
-    id: "projects", name: "作品", title: "代码与产品", icon: "terminal", swatch: "blue",
+    id: "projects", name: "作品", title: "Vibe Coding", icon: "terminal", swatch: "blue",
     size: { width: 880, height: 680 }, minSize: { width: 480, height: 400 }, inDock: true,
-    keywords: ["work", "projects", "代码", "产品", "作品"],
+    keywords: ["work", "projects", "vibe coding", "代码", "产品", "作品"],
   },
   {
     id: "now",
@@ -45,15 +45,14 @@ export const apps: AppMeta[] = [
     keywords: ["fragments", "隐空间", "向量", "贴纸", "mds", "归类", "latent"],
   },
   {
-    id: "music",
-    name: "音乐",
-    title: "音乐",
-    icon: "music",
-    swatch: "pink",
-    size: { width: 940, height: 640 },
-    minSize: { width: 420, height: 520 },
-    inDock: true,
-    keywords: ["music", "歌单", "播放", "网易云", "歌词", "listen"],
+    id: "pingpong", name: "乒乓球", title: "乒乓球", icon: "pingpong", swatch: "blue",
+    size: { width: 900, height: 640 }, minSize: { width: 460, height: 460 }, inDock: true,
+    keywords: ["pingpong", "table tennis", "乒乓", "球台", "游戏", "打一局", "视频"],
+  },
+  {
+    id: "moments", name: "朋友圈", title: "朋友圈", icon: "moments", swatch: "orange",
+    size: { width: 620, height: 720 }, minSize: { width: 380, height: 420 }, inDock: true,
+    keywords: ["moments", "朋友圈", "动态", "记录", "生活", "照片"],
   },
   {
     id: "notes",

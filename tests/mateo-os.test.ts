@@ -31,10 +31,30 @@ describe("app registry", () => {
 });
 
 describe("window manager", () => {
+  it("never cascades a new window past the work area", () => {
+    const short: Rect = { x: 0, y: 54, width: 1440, height: 742 };
+    let state = initialWindowState;
+    for (const app of apps) {
+      state = windowReducer(state, { type: "open", id: app.id, area: short });
+      const { rect } = state.windows[state.windows.length - 1];
+      expect(rect.y + rect.height).toBeLessThanOrEqual(short.y + short.height);
+      expect(rect.x + rect.width).toBeLessThanOrEqual(short.x + short.width);
+    }
+  });
+
+  it("keeps maximized windows maximized when the viewport changes", () => {
+    let state = windowReducer(open(initialWindowState, "now"), { type: "toggleMaximize", id: "now", area });
+    const larger: Rect = { ...area, width: 1920, height: 1000 };
+    state = windowReducer(state, { type: "reflow", area: larger });
+    expect(state.windows[0].maximized).toBe(true);
+    expect(state.windows[0].rect).toEqual(larger);
+    expect(windowReducer(state, { type: "reflow", area: larger })).toBe(state);
+  });
+
   it("opens a window once and brings it to the front", () => {
     let state = open(initialWindowState, "now");
-    state = open(state, "music");
-    expect(activeWindowId(state)).toBe("music");
+    state = open(state, "pingpong");
+    expect(activeWindowId(state)).toBe("pingpong");
     state = open(state, "now");
     expect(state.windows).toHaveLength(2);
     expect(activeWindowId(state)).toBe("now");
@@ -47,13 +67,13 @@ describe("window manager", () => {
   });
 
   it("passes focus on when the front window is minimized, and restores it on open", () => {
-    let state = open(open(initialWindowState, "now"), "music");
-    state = windowReducer(state, { type: "minimize", id: "music" });
+    let state = open(open(initialWindowState, "now"), "pingpong");
+    state = windowReducer(state, { type: "minimize", id: "pingpong" });
     expect(activeWindowId(state)).toBe("now");
-    expect(state.windows.find((window) => window.id === "music")?.minimized).toBe(true);
-    state = open(state, "music");
-    expect(activeWindowId(state)).toBe("music");
-    expect(state.windows.find((window) => window.id === "music")?.minimized).toBe(false);
+    expect(state.windows.find((window) => window.id === "pingpong")?.minimized).toBe(true);
+    state = open(state, "pingpong");
+    expect(activeWindowId(state)).toBe("pingpong");
+    expect(state.windows.find((window) => window.id === "pingpong")?.minimized).toBe(false);
   });
 
   it("toggles maximize and restores the previous rect", () => {
@@ -114,11 +134,11 @@ describe("spotlight", () => {
   const index = buildSpotlightIndex();
 
   it("suggests apps when the query is empty", () => {
-    expect(searchSpotlight(index, "").every((item) => item.group === "应用" || item.id === "cmd:play")).toBe(true);
+    expect(searchSpotlight(index, "").every((item) => item.group === "应用")).toBe(true);
   });
 
   it("ranks an exact app name first", () => {
-    expect(searchSpotlight(index, "音乐")[0].id).toBe("app:music");
+    expect(searchSpotlight(index, "朋友圈")[0].id).toBe("app:moments");
   });
 
   it("finds notes and fragments by their content", () => {
@@ -127,7 +147,7 @@ describe("spotlight", () => {
   });
 
   it("requires every term to match", () => {
-    expect(searchSpotlight(index, "音乐 不存在的词")).toEqual([]);
+    expect(searchSpotlight(index, "朋友圈 不存在的词")).toEqual([]);
   });
 });
 
@@ -136,8 +156,6 @@ describe("terminal", () => {
     clock: { hour: 1, minute: 10, time: "01:10", date: "10/15", weekday: "周四", moment: "凌晨一点", isNight: true },
     weather: { temperature: 22, code: 3, isDay: false, label: "阴", icon: "cloud" },
     birthday: { birthdayPercent: 76.2, daysUntilBirthday: 86 },
-    playlistTotal: 1408,
-    todaySong: { name: "大风吹", artist: "草东没有派对" },
     random: () => 0,
   };
 
@@ -147,7 +165,8 @@ describe("terminal", () => {
   });
 
   it("opens apps and notes", () => {
-    expect(runCommand("open 音乐", context).effect).toEqual({ type: "open", app: "music" });
+    expect(runCommand("open 乒乓球", context).effect).toEqual({ type: "open", app: "pingpong" });
+    expect(runCommand("open 朋友圈", context).effect).toEqual({ type: "open", app: "moments" });
     expect(runCommand("open 足球", context).effect).toEqual({ type: "open", app: "notes", payload: "football" });
     expect(runCommand("open nowhere", context).lines[0].tone).toBe("error");
   });
@@ -159,15 +178,14 @@ describe("terminal", () => {
   });
 
   it("reports live signals", () => {
-    expect(runCommand("weather", context).lines[0].text).toBe("上海 · 22° · 阴");
+    expect(runCommand("weather", context).lines[0].text).toBe("北京 · 22° · 阴");
     expect(runCommand("date", context).lines[0].text).toContain("凌晨一点");
     expect(runCommand("birthday", context).lines[0].text).toContain("86");
-    expect(runCommand("play", context).effect).toEqual({ type: "play" });
   });
 
   it("samples a sentence and labels it as preset", () => {
     const result = runCommand("sample 0.1", context);
-    expect(result.lines[0].text).toBe("我在上海写代码，也做界面。喜欢把模糊的念头变成能用的东西。");
+    expect(result.lines[0].text).toBe("我在北京vibe coding，也做界面。喜欢把模糊的念头变成能用的东西。");
     expect(result.lines.some((line) => line.text.includes("预设"))).toBe(true);
     expect(runCommand("sample -1", context).lines[0].tone).toBe("muted");
   });
@@ -181,7 +199,7 @@ describe("terminal", () => {
 describe("notes", () => {
   it("has unique ids that the rest of the OS can link to", () => {
     expect(new Set(notes.map((note) => note.id)).size).toBe(notes.length);
-    for (const id of ["about", "football", "moments", "how", "site"]) expect(noteById[id]).toBeDefined();
+    for (const id of ["about", "football", "how", "site"]) expect(noteById[id]).toBeDefined();
     expect(appById.notes).toBeDefined();
   });
 });

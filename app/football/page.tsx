@@ -83,8 +83,8 @@ export default function FootballPage() {
         <section className="detail-block tone-yellow detail-quote">
           <span className="block-label">下一场</span>
           <blockquote>有失误也没关系，下一次继续跑。</blockquote>
-          <Link href="/#listen" className="pill-link">
-            回去听歌 <ArrowUpRight size={16} aria-hidden="true" />
+          <Link href="/#pingpong" className="pill-link">
+            打一局乒乓球 <ArrowUpRight size={16} aria-hidden="true" />
           </Link>
         </section>
       </main>

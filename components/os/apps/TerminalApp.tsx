@@ -6,11 +6,11 @@ import { useOS } from "../OSProvider";
 
 type Entry = { kind: "input"; text: string } | { kind: "output"; line: TerminalLine };
 
-const PROMPT = "mateo@shanghai ~ %";
+const PROMPT = "mateo@beijing ~ %";
 const commandNames = terminalCommands.map(([name]) => name.split(" ")[0]);
 
 export default function TerminalApp() {
-  const { clock, weather, birthday, library, todaySong, openApp, playToday, regenerate, lock, closeApp } = useOS();
+  const { clock, weather, birthday, openApp, regenerate, lock, closeApp } = useOS();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [input, setInput] = useState("");
   const history = useRef<string[]>([]);
@@ -46,8 +46,6 @@ export default function TerminalApp() {
       clock,
       weather,
       birthday,
-      playlistTotal: library?.total ?? null,
-      todaySong: todaySong ? { name: todaySong.name, artist: todaySong.artist } : null,
       random: Math.random,
     });
 
@@ -60,7 +58,6 @@ export default function TerminalApp() {
     const effect = result.effect;
     if (!effect) return;
     if (effect.type === "open") openApp(effect.app, { payload: effect.payload, origin: null });
-    if (effect.type === "play") playToday(null);
     if (effect.type === "regenerate") regenerate();
     if (effect.type === "link") window.open(effect.href, "_blank", "noopener,noreferrer");
     if (effect.type === "lock") lock();

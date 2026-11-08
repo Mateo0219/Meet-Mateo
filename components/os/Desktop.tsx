@@ -7,7 +7,7 @@ import { Github } from "lucide-react";
 import { motion } from "motion/react";
 import { PROJECT_URL, type AppId } from "@/lib/os-apps";
 import { rectOf, useOS } from "./OSProvider";
-import { AVATAR_SRC, OrbitWidget, ProfileWidget, SongWidget, WeatherWidget } from "./Widgets";
+import { AVATAR_SRC, OrbitWidget, ProfileWidget, WeatherWidget } from "./Widgets";
 
 interface DesktopFile {
   id: string;
@@ -22,7 +22,7 @@ interface DesktopFile {
 const desktopFiles: DesktopFile[] = [
   { id: "about", label: "关于我.md", kind: "doc", tag: "MD", tone: "var(--orange)", open: { app: "notes", payload: "about" } },
   { id: "football", label: "足球笔记.md", kind: "doc", tag: "MD", tone: "var(--lime)", open: { app: "notes", payload: "football" } },
-  { id: "moments", label: "记录", kind: "folder", open: { app: "notes", payload: "moments" } },
+  { id: "moments", label: "朋友圈", kind: "folder", open: { app: "moments" } },
   { id: "llms", label: "llms.txt", kind: "doc", tag: "TXT", tone: "var(--lavender)", open: { app: "llms" } },
   { id: "repo", label: "Meet-Mateo", kind: "alias", href: PROJECT_URL },
 ];
@@ -65,7 +65,6 @@ export default function Desktop() {
           <WeatherWidget />
           <OrbitWidget />
         </div>
-        <SongWidget />
       </div>
 
       <div className="desktop-icons" role="list" aria-label="桌面文件">

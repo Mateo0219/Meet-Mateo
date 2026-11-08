@@ -110,10 +110,8 @@ function Sticker({ fragment, label, box, index, draggable, active, dimmed, canva
 }
 
 export default function FragmentsApp({ payload, navigationId }: { payload?: string; navigationId: number }) {
-  const { library, todaySong, birthday, openApp } = useOS();
+  const { birthday, openApp } = useOS();
   const liveLabels: LiveLabels = {
-    playlist: library ? `${library.total} 首喜欢的歌` : undefined,
-    song: todaySong ? `♪ ${todaySong.name}` : undefined,
     birthday: birthday ? `生日 · 还有 ${birthday.daysUntilBirthday} 天` : undefined,
   };
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -216,7 +214,7 @@ export default function FragmentsApp({ payload, navigationId }: { payload?: stri
               className="cluster-label"
               style={{ left: cluster.x, top: cluster.y, color: swatches[fragmentKinds[cluster.kind].swatch].bg }}
               initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
+              animate={{ opacity: 0.6, scale: 1 }}
               aria-hidden="true"
             >
               {fragmentKinds[cluster.kind].label}

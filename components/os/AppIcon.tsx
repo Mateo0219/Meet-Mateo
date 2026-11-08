@@ -1,11 +1,12 @@
-import { FileText, Github, Music2, NotebookPen, Shapes, Sparkles, TerminalSquare, UserRound, type LucideIcon } from "lucide-react";
+import { Camera, CircleDot, FileText, Github, NotebookPen, Shapes, Sparkles, TerminalSquare, UserRound, type LucideIcon } from "lucide-react";
 import type { AppIconName } from "@/lib/os-apps";
 import { swatches, type SwatchName } from "@/lib/poster";
 
 const glyphs: Record<AppIconName | "github", LucideIcon> = {
   sparkles: Sparkles,
   shapes: Shapes,
-  music: Music2,
+  pingpong: CircleDot,
+  moments: Camera,
   notes: NotebookPen,
   terminal: TerminalSquare,
   file: FileText,

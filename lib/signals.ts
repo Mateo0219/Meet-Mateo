@@ -1,8 +1,9 @@
-const SHANGHAI_TIME_ZONE = "Asia/Shanghai";
+// "Asia/Shanghai" is the IANA id for China Standard Time (there is no Asia/Beijing).
+const BEIJING_TIME_ZONE = "Asia/Shanghai";
 const HOUR_WORDS = ["十二", "一", "两", "三", "四", "五", "六", "七", "八", "九", "十", "十一"];
 const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
-export interface ShanghaiClock {
+export interface BeijingClock {
   hour: number;
   minute: number;
   time: string;
@@ -29,9 +30,9 @@ export function describeHour(hour: number): string {
   return `深夜${hourWord(hour)}`;
 }
 
-export function readShanghaiClock(now: Date): ShanghaiClock {
+export function readBeijingClock(now: Date): BeijingClock {
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: SHANGHAI_TIME_ZONE,
+    timeZone: BEIJING_TIME_ZONE,
     hourCycle: "h23",
     hour: "2-digit",
     minute: "2-digit",

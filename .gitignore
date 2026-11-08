@@ -22,6 +22,9 @@
 .DS_Store
 *.pem
 
+# local moments store (development only)
+/.data/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

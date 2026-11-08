@@ -31,14 +31,6 @@ describe("Mateo OS performance budget", () => {
     }
   });
 
-  it("only loads the audio player when the music app opens", () => {
-    const musicApp = projectFile("components/os/apps/MusicApp.tsx");
-    const shell = projectFile("components/os/MateoOS.tsx");
-
-    expect(musicApp).toMatch(/dynamic\(\(\) => import\("\.\.\/\.\.\/MusicPlayer"\)/);
-    expect(shell).not.toContain("MusicPlayer");
-  });
-
   it("drives window drags with motion values instead of React state", () => {
     const windowSource = projectFile("components/os/Window.tsx");
 

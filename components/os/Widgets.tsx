@@ -2,9 +2,8 @@
 
 /* eslint-disable @next/next/no-img-element -- small local SVG avatar, no optimisation needed */
 
-import Image from "next/image";
 import { useRef } from "react";
-import { ArrowUpRight, Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Moon, Play, Sun, type LucideIcon } from "lucide-react";
+import { ArrowUpRight, Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Moon, Sun, type LucideIcon } from "lucide-react";
 import { motion } from "motion/react";
 import { swatches, type SwatchName } from "@/lib/poster";
 import { sentenceText } from "@/lib/token-sentence";
@@ -60,8 +59,8 @@ export function WeatherWidget() {
   const paint = useWidgetPaint(composition.colors.weather);
   const Glyph = weather ? weatherIcons[weather.icon] : Cloud;
   return (
-    <article className="widget widget-small" style={paint} aria-label="上海天气">
-      <span className="widget-label">上海</span>
+    <article className="widget widget-small" style={paint} aria-label="北京天气">
+      <span className="widget-label">北京</span>
       <Glyph className="widget-glyph" size={30} strokeWidth={1.8} aria-hidden="true" />
       <strong className="widget-figure">{weather ? `${weather.temperature}°` : "--°"}</strong>
       <span className="widget-caption">{weather?.label ?? "读取中"}</span>
@@ -89,33 +88,6 @@ export function OrbitWidget() {
       </svg>
       <strong className="widget-figure">{birthday?.daysUntilBirthday ?? "--"}</strong>
       <span className="widget-caption">天后再绕一圈</span>
-    </article>
-  );
-}
-
-export function SongWidget() {
-  const { todaySong, composition, playToday, library } = useOS();
-  const ref = useRef<HTMLElement>(null);
-  const paint = useWidgetPaint(composition.colors.song);
-  return (
-    <article ref={ref} className="widget widget-song" style={paint}>
-      <div className="widget-disc" aria-hidden="true">
-        {todaySong ? <Image src={todaySong.cover} alt="" width={160} height={160} unoptimized /> : null}
-      </div>
-      <div className="widget-song-copy">
-        <span className="widget-label">今天抽到 · {library ? `${library.total} 首里的一首` : "歌单读取中"}</span>
-        <strong>{todaySong?.name ?? "正在抽歌…"}</strong>
-        <span className="widget-caption">{todaySong?.artist ?? ""}</span>
-      </div>
-      <button
-        type="button"
-        className="widget-play"
-        onClick={() => playToday(rectOf(ref.current))}
-        disabled={!todaySong}
-        aria-label={todaySong ? `播放 ${todaySong.name}` : "播放"}
-      >
-        <Play size={18} fill="currentColor" aria-hidden="true" />
-      </button>
     </article>
   );
 }

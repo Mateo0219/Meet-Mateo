@@ -6,7 +6,7 @@ import type { SwatchName } from "./poster";
 export type SpotlightAction =
   | { type: "app"; id: AppId; payload?: string }
   | { type: "link"; href: string }
-  | { type: "command"; command: "regenerate" | "playToday" | "lock" };
+  | { type: "command"; command: "regenerate" | "lock" };
 
 export interface SpotlightItem {
   id: string;
@@ -52,7 +52,6 @@ export function buildSpotlightIndex(): SpotlightItem[] {
       action: { type: "app" as const, id: "fragments" as const, payload: fragment.id },
     })),
     { id: "cmd:regenerate", title: "重新生成此刻", subtitle: "操作 · 换一个随机种子", group: "操作", keywords: ["regenerate", "seed", "壁纸", "配色"], swatch: "yellow", action: { type: "command", command: "regenerate" } },
-    { id: "cmd:play", title: "播放今天抽到的歌", subtitle: "操作 · 音乐", group: "操作", keywords: ["play", "播放", "歌"], swatch: "pink", action: { type: "command", command: "playToday" } },
     { id: "cmd:lock", title: "锁定屏幕", subtitle: "操作", keywords: ["lock", "锁屏"], group: "操作", swatch: "night", action: { type: "command", command: "lock" } },
     { id: "link:github", title: "GitHub", subtitle: "链接 · @mateo0219", group: "操作", keywords: ["github", "code", "源码"], swatch: "night", action: { type: "link", href: GITHUB_URL } },
   ];
@@ -74,7 +73,7 @@ const groupWeight: Record<SpotlightItem["group"], number> = { 应用: 4, 操作:
 
 export function searchSpotlight(index: readonly SpotlightItem[], query: string, limit = 8): SpotlightItem[] {
   const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  if (terms.length === 0) return index.filter((item) => item.group === "应用" || item.id === "cmd:play").slice(0, limit);
+  if (terms.length === 0) return index.filter((item) => item.group === "应用").slice(0, limit);
   return index
     .map((item, position) => ({ item, position, score: scoreItem(item, terms) }))
     .filter((entry) => entry.score > 0)

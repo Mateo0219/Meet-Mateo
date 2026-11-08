@@ -12,7 +12,7 @@ import Spotlight from "./Spotlight";
 import SpaceHome from "./SpaceHome";
 import Window from "./Window";
 
-function Windows() {
+export function Windows() {
   const { windows, activeId, workArea, dispatch, closeApp, minimizeApp, toggleMaximize } = useOS();
   const commit = useCallback((id: AppId, rect: Rect) => dispatch({ type: "commitRect", id, rect, area: workArea }), [dispatch, workArea]);
 

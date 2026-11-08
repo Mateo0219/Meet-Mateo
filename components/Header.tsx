@@ -9,7 +9,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 const navItems = [
   { name: "Mateo OS", href: "/", path: "/" },
   { name: "足球", href: "/football", path: "/football" },
-  { name: "记录", href: "/moments", path: "/moments" },
+  { name: "朋友圈", href: "/#moments", path: "/moments" },
 ] as const;
 
 export default function Header() {

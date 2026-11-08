@@ -34,7 +34,7 @@ const isMac = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(n
 
 export default function MenuBar() {
   const os = useOS();
-  const { clock, weather, nowPlaying, activeId, windows, openApp, closeApp, minimizeApp, toggleMaximize, dispatch, regenerate, lock, setSpotlightOpen } = os;
+  const { clock, weather, activeId, windows, openApp, closeApp, minimizeApp, toggleMaximize, dispatch, regenerate, lock, setSpotlightOpen } = os;
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const barRef = useRef<HTMLElement>(null);
   const mod = isMac() ? "⌘" : "Ctrl ";
@@ -92,7 +92,7 @@ export default function MenuBar() {
         separator,
         item("关于我", go("notes", "about")),
         item("足球笔记", go("notes", "football")),
-        item("记录", go("notes", "moments")),
+        item("朋友圈", go("moments")),
         item("llms.txt", go("llms")),
         separator,
         item("GitHub", () => window.open(GITHUB_URL, "_blank", "noopener,noreferrer")),
@@ -180,14 +180,8 @@ export default function MenuBar() {
       </nav>
 
       <div className="menubar-right">
-        {nowPlaying?.playing && (
-          <button type="button" className="menubar-status now-playing" onClick={() => openApp("music")} aria-label={`正在播放 ${nowPlaying.track.name}`}>
-            <span className="mini-eq" aria-hidden="true"><i /><i /><i /></span>
-            <span className="now-playing-name">{nowPlaying.track.name}</span>
-          </button>
-        )}
         {weather && WeatherGlyph && (
-          <span className="menubar-status" title={`上海 · ${weather.label}`}>
+          <span className="menubar-status" title={`北京 · ${weather.label}`}>
             <WeatherGlyph size={15} strokeWidth={2} aria-hidden="true" />
             {weather.temperature}°
           </span>

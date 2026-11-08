@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { composePoster, posterLayouts, swatches } from "../lib/poster";
 import { createRandom } from "../lib/random";
-import { describeHour, readShanghaiClock } from "../lib/signals";
+import { describeHour, readBeijingClock } from "../lib/signals";
 import {
   applyTemperature,
   greedySentence,
@@ -28,7 +28,7 @@ describe("createRandom", () => {
   });
 });
 
-describe("Shanghai clock", () => {
+describe("Beijing clock", () => {
   it("names the hour the way people say it", () => {
     expect(describeHour(0)).toBe("午夜");
     expect(describeHour(1)).toBe("凌晨一点");
@@ -41,15 +41,15 @@ describe("Shanghai clock", () => {
   });
 
   it("reads time in Asia/Shanghai regardless of the host time zone", () => {
-    const clock = readShanghaiClock(new Date("2026-10-14T17:10:00Z"));
+    const clock = readBeijingClock(new Date("2026-10-14T17:10:00Z"));
     expect(clock.time).toBe("01:10");
     expect(clock.weekday).toBe("周四");
     expect(clock.moment).toBe("凌晨一点");
     expect(clock.isNight).toBe(true);
   });
 
-  it("treats Shanghai midnight as hour 0, not 24", () => {
-    const clock = readShanghaiClock(new Date("2026-10-14T16:05:00Z"));
+  it("treats Beijing midnight as hour 0, not 24", () => {
+    const clock = readBeijingClock(new Date("2026-10-14T16:05:00Z"));
     expect(clock.hour).toBe(0);
     expect(clock.time).toBe("00:05");
   });
@@ -100,7 +100,7 @@ describe("token sentence", () => {
   });
 
   it("produces the most likely sentence when greedy", () => {
-    expect(sentenceText(greedySentence())).toBe("我在上海写代码，也做界面。喜欢把模糊的念头变成能用的东西。");
+    expect(sentenceText(greedySentence())).toBe("我在北京vibe coding，也做界面。喜欢把模糊的念头变成能用的东西。");
   });
 
   it("only picks valid candidates for every slot", () => {

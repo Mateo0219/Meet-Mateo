@@ -10,7 +10,7 @@ import {
   type Bounds,
   type Box,
 } from "../lib/fragments";
-import { describeWeatherCode, isShanghaiWeather, parseOpenMeteo } from "../lib/weather";
+import { describeWeatherCode, isBeijingWeather, parseOpenMeteo } from "../lib/weather";
 
 const bounds: Bounds = { width: 1200, height: 640, inset: 20 };
 const sizes = fragments.map((fragment) => ({ id: fragment.id, width: 120, height: 44 }));
@@ -130,12 +130,12 @@ describe("weather", () => {
   it("parses Open-Meteo current conditions", () => {
     const weather = parseOpenMeteo({ current: { temperature_2m: 22.5, weather_code: 3, is_day: 1 } });
     expect(weather).toEqual({ temperature: 23, code: 3, isDay: true, label: "阴", icon: "cloud" });
-    expect(isShanghaiWeather(weather)).toBe(true);
+    expect(isBeijingWeather(weather)).toBe(true);
   });
 
   it("rejects malformed responses", () => {
     expect(parseOpenMeteo(null)).toBeNull();
     expect(parseOpenMeteo({ current: { temperature_2m: "hot", weather_code: 3 } })).toBeNull();
-    expect(isShanghaiWeather({ temperature: 20, code: 0, isDay: true, label: "晴", icon: "<script>" })).toBe(false);
+    expect(isBeijingWeather({ temperature: 20, code: 0, isDay: true, label: "晴", icon: "<script>" })).toBe(false);
   });
 });

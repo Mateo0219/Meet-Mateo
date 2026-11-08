@@ -12,15 +12,13 @@ import {
   type MutableRefObject,
   type ReactNode,
 } from "react";
-import type { MusicControls, TrackRequest } from "../MusicPlayer";
 import { appById, type AppId } from "@/lib/os-apps";
 import { composePoster, type PosterComposition } from "@/lib/poster";
 import { createRandom, randomSeed } from "@/lib/random";
-import { readShanghaiClock, type ShanghaiClock } from "@/lib/signals";
+import { readBeijingClock, type BeijingClock } from "@/lib/signals";
 import { getBirthdayProgress, type BirthdayProgress } from "@/lib/time-progress";
 import { greedySentence, sampleSentence, type SentenceChoice } from "@/lib/token-sentence";
-import { usePlaylist, type LibraryTrack, type PlaylistLibrary } from "@/lib/use-playlist";
-import { isShanghaiWeather, type ShanghaiWeather } from "@/lib/weather";
+import { isBeijingWeather, type BeijingWeather } from "@/lib/weather";
 import {
   activeWindowId,
   initialWindowState,
@@ -31,14 +29,9 @@ import {
 } from "@/lib/window-manager";
 
 export const MENU_BAR_HEIGHT = 54;
-export const DOCK_SPACE = 92;
+export const DOCK_SPACE = 104;
 const UNLOCK_KEY = "mateo-os-unlocked";
 const DEFAULT_TEMPERATURE = 0.7;
-
-export interface NowPlaying {
-  track: Pick<LibraryTrack, "id" | "name" | "artist" | "cover">;
-  playing: boolean;
-}
 
 interface OpenOptions {
   origin?: Rect | null;
@@ -54,12 +47,10 @@ interface OSContextValue {
   unlock: () => void;
   lock: () => void;
 
-  clock: ShanghaiClock | null;
+  clock: BeijingClock | null;
   isNight: boolean;
   birthday: BirthdayProgress | null;
-  weather: ShanghaiWeather | null;
-  library: PlaylistLibrary | null;
-  todaySong: LibraryTrack | null;
+  weather: BeijingWeather | null;
 
   seed: number;
   composition: PosterComposition;
@@ -78,13 +69,6 @@ interface OSContextValue {
   minimizeApp: (id: AppId) => void;
   toggleMaximize: (id: AppId) => void;
   dockIcons: MutableRefObject<Map<AppId, HTMLElement>>;
-
-  trackRequest: TrackRequest | null;
-  musicControls: MutableRefObject<MusicControls | null>;
-  consumeTrackRequest: (nonce: number) => void;
-  playToday: (origin?: Rect | null) => void;
-  nowPlaying: NowPlaying | null;
-  setNowPlaying: (value: NowPlaying | null) => void;
 
   spotlightOpen: boolean;
   setSpotlightOpen: (open: boolean) => void;
@@ -109,28 +93,23 @@ export default function OSProvider({ children }: { children: ReactNode }) {
   const [isMobile, setIsMobile] = useState(false);
   const [locked, setLocked] = useState(false);
   const [restoredSession, setRestoredSession] = useState(false);
-  const [clock, setClock] = useState<ShanghaiClock | null>(null);
+  const [clock, setClock] = useState<BeijingClock | null>(null);
   const [birthday, setBirthday] = useState<BirthdayProgress | null>(null);
-  const [weather, setWeather] = useState<ShanghaiWeather | null>(null);
+  const [weather, setWeather] = useState<BeijingWeather | null>(null);
   const [seed, setSeed] = useState(1000);
   const [choice, setChoice] = useState<SentenceChoice>(greedySentence);
   const [temperature, setTemperature] = useState(DEFAULT_TEMPERATURE);
   const [windows, dispatch] = useReducer(windowReducer, initialWindowState);
   const [viewport, setViewport] = useState({ width: 1440, height: 900 });
-  const [trackRequest, setTrackRequest] = useState<TrackRequest | null>(null);
-  const consumeTrackRequest = useCallback((nonce: number) => setTrackRequest((current) => current?.nonce === nonce ? null : current), []);
-  const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [spotlightOpen, setSpotlightOpen] = useState(false);
   const dockIcons = useRef(new Map<AppId, HTMLElement>());
-  const musicControls = useRef<MusicControls | null>(null);
   const handledHash = useRef<string | null>(null);
-  const library = usePlaylist();
 
   // Time, chance and viewport are client-only; the server renders the space overview.
   useEffect(() => {
     const tick = () => {
       const now = new Date();
-      setClock(readShanghaiClock(now));
+      setClock(readBeijingClock(now));
       setBirthday(getBirthdayProgress(now));
     };
     tick();
@@ -150,37 +129,52 @@ export default function OSProvider({ children }: { children: ReactNode }) {
     measure();
     window.addEventListener("resize", measure);
     setReady(true);
-    const interval = window.setInterval(tick, 20_000);
+    // Tick on the minute boundary so the clock never lags what it displays.
+    let timer = 0;
+    const schedule = () => {
+      timer = window.setTimeout(() => {
+        tick();
+        schedule();
+      }, 60_000 - (Date.now() % 60_000) + 30);
+    };
+    schedule();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
-      window.clearInterval(interval);
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("resize", measure);
     };
   }, []);
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/weather", { signal: controller.signal })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data: unknown) => {
-        if (isShanghaiWeather(data)) setWeather(data);
-      })
-      .catch(() => undefined);
-    return () => controller.abort();
+    const load = () =>
+      fetch("/api/weather", { signal: controller.signal })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data: unknown) => {
+          if (isBeijingWeather(data)) setWeather(data);
+        })
+        .catch(() => undefined);
+    load();
+    const interval = window.setInterval(load, 30 * 60_000);
+    return () => {
+      window.clearInterval(interval);
+      controller.abort();
+    };
   }, []);
 
   const isNight = clock?.isNight ?? false;
   const composition = useMemo(() => composePoster(seed, isNight), [seed, isNight]);
 
-  const todaySong = useMemo(() => {
-    if (!library) return null;
-    const random = createRandom(seed * 31 + 7);
-    return library.tracks[Math.floor(random() * library.tracks.length)] ?? null;
-  }, [library, seed]);
-
   const workArea = useMemo<Rect>(
     () => ({ x: 0, y: MENU_BAR_HEIGHT, width: viewport.width, height: Math.max(320, viewport.height - MENU_BAR_HEIGHT - DOCK_SPACE) }),
     [viewport],
   );
+
+  useEffect(() => dispatch({ type: "reflow", area: workArea }), [workArea]);
 
   const unlock = useCallback(() => {
     setLocked(false);
@@ -220,35 +214,32 @@ export default function OSProvider({ children }: { children: ReactNode }) {
       if (handledHash.current === hash) return;
       handledHash.current = hash;
       if (hash === "#fragments") openApp("fragments");
-      else if (hash === "#listen") openApp("music");
+      else if (hash === "#pingpong") openApp("pingpong");
+      else if (hash === "#moments") openApp("moments");
     };
     navigate();
     window.addEventListener("hashchange", navigate);
     return () => window.removeEventListener("hashchange", navigate);
   }, [ready, locked, openApp]);
 
-  const closeApp = useCallback((id: AppId) => {
-    dispatch({ type: "close", id });
-    if (id === "music") { setNowPlaying(null); setTrackRequest(null); }
-  }, []);
-
-  const minimizeApp = useCallback((id: AppId) => {
-    dispatch({ type: "minimize", id, target: rectOf(dockIcons.current.get(id)) });
-    // Apps outside the Dock can be restored through the Mateo OS menu.
-    const launcher = dockIcons.current.get(id) ?? document.querySelector<HTMLElement>('.space-brand, .menubar-trigger[aria-label="窗口菜单"]');
+  // The focused control is about to disappear; hand focus to where the app can be reopened.
+  // Apps outside the Dock can be restored through the Mateo OS menu.
+  const focusLauncher = useCallback((id: AppId) => {
+    const launcher = dockIcons.current.get(id) ?? document.querySelector<HTMLElement>(".space-brand");
     launcher?.focus({ preventScroll: true });
   }, []);
 
-  const toggleMaximize = useCallback((id: AppId) => dispatch({ type: "toggleMaximize", id, area: workArea }), [workArea]);
+  const closeApp = useCallback((id: AppId) => {
+    dispatch({ type: "close", id });
+    focusLauncher(id);
+  }, [focusLauncher]);
 
-  const playToday = useCallback(
-    (origin?: Rect | null) => {
-      if (!todaySong) return;
-      openApp("music", { origin });
-      setTrackRequest({ id: todaySong.id, nonce: Date.now(), autoplay: true });
-    },
-    [openApp, todaySong],
-  );
+  const minimizeApp = useCallback((id: AppId) => {
+    dispatch({ type: "minimize", id, target: rectOf(dockIcons.current.get(id)) });
+    focusLauncher(id);
+  }, [focusLauncher]);
+
+  const toggleMaximize = useCallback((id: AppId) => dispatch({ type: "toggleMaximize", id, area: workArea }), [workArea]);
 
   const value: OSContextValue = {
     ready,
@@ -261,8 +252,6 @@ export default function OSProvider({ children }: { children: ReactNode }) {
     isNight,
     birthday,
     weather,
-    library,
-    todaySong,
     seed,
     composition,
     choice,
@@ -279,12 +268,6 @@ export default function OSProvider({ children }: { children: ReactNode }) {
     minimizeApp,
     toggleMaximize,
     dockIcons,
-    trackRequest,
-    musicControls,
-    consumeTrackRequest,
-    playToday,
-    nowPlaying,
-    setNowPlaying,
     spotlightOpen,
     setSpotlightOpen,
   };
